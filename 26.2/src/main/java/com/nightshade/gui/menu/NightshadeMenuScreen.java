@@ -303,11 +303,14 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
             if (!active) {
                 hits.add(new Hit(tx - 4, 0, tx + w + 4, BAR_H, tab.action()));
             }
+            // The tour's step 4 highlights Mods and the tabs after it (Client, Cosmetics, Screenshots).
             if (tab.id().equals("mods")) {
                 modsX1 = tx - 4;
                 modsY1 = 2;
-                modsX2 = tx + w + 4;
                 modsY2 = BAR_H - 2;
+            }
+            if (tab.id().equals("mods") || tab.id().equals("client") || tab.id().equals("cosmetics") || tab.id().equals("shots")) {
+                modsX2 = tx + w + 4;
             }
             tx += w + gap;
         }
@@ -784,6 +787,15 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
 
     public void tourNextForTest() {
         nextTourStep();
+    }
+
+    /** Where the tour's Next and Skip buttons were last drawn. */
+    public int[] tourNextPointForTest() {
+        return tourNext.center();
+    }
+
+    public int[] tourSkipPointForTest() {
+        return tourSkip.center();
     }
 
     private void renderTour(GuiGraphicsExtractor ctx, int mouseX, int mouseY) {

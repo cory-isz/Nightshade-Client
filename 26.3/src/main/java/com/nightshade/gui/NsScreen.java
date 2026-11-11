@@ -17,6 +17,36 @@ public abstract class NsScreen extends Screen {
         super(title);
     }
 
+    /**
+     * Nightshade screens use GLFW button numbers (0 = left, 1 = right, 2 = middle). Minecraft 26.3 moved to SDL, which
+     * numbers them from 1 (1 = left, 2 = middle, 3 = right); this converts them so every screen works the same on all
+     * versions. On versions that still use GLFW numbers it changes nothing.
+     */
+    public static int glfwButton(int nativeButton) {
+        if (com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT == 0) {
+            return nativeButton;
+        }
+        return switch (nativeButton) {
+            case 1 -> 0;
+            case 3 -> 1;
+            case 2 -> 2;
+            default -> nativeButton - 1;
+        };
+    }
+
+    /** The reverse of {@link #glfwButton}: a GLFW button number as this Minecraft version reports it. */
+    public static int nativeButton(int glfwButton) {
+        if (com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT == 0) {
+            return glfwButton;
+        }
+        return switch (glfwButton) {
+            case 0 -> 1;
+            case 1 -> 3;
+            case 2 -> 2;
+            default -> glfwButton + 1;
+        };
+    }
+
     /*
      * 26.3 switched to SDL, where typed characters only arrive while text input is started. Vanilla starts it when an
      * EditBox gains focus; Nightshade's own text fields are drawn by the screen itself, so the screen owns text input
@@ -73,20 +103,20 @@ public abstract class NsScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         float s = inputScale();
-        return onMouseClicked(click.x() / s, click.y() / s, click.button()) || super.mouseClicked(click, doubled);
+        return onMouseClicked(click.x() / s, click.y() / s, glfwButton(click.button())) || super.mouseClicked(click, doubled);
     }
 
     @Override
     public boolean mouseReleased(MouseButtonEvent click) {
         float s = inputScale();
-        boolean handled = onMouseReleased(click.x() / s, click.y() / s, click.button());
+        boolean handled = onMouseReleased(click.x() / s, click.y() / s, glfwButton(click.button()));
         return super.mouseReleased(click) || handled;
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
         float s = inputScale();
-        return onMouseDragged(click.x() / s, click.y() / s, click.button(), deltaX / s, deltaY / s) || super.mouseDragged(click, deltaX, deltaY);
+        return onMouseDragged(click.x() / s, click.y() / s, glfwButton(click.button()), deltaX / s, deltaY / s) || super.mouseDragged(click, deltaX, deltaY);
     }
 
     @Override
@@ -110,7 +140,7 @@ public abstract class NsScreen extends Screen {
     // ------------------------------------------------------------------ helpers for programmatic input (tests)
 
     public static MouseButtonEvent click(double x, double y, int button) {
-        return new MouseButtonEvent(x, y, new MouseButtonInfo(button, 0));
+        return new MouseButtonEvent(x, y, new MouseButtonInfo(nativeButton(button), 0));
     }
 
     public static KeyEvent key(int keyCode) {

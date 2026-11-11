@@ -26,6 +26,16 @@ public final class MainMenuModule extends Module {
             .visibleWhen(() -> customPause.get() && pauseStats.get());
     private final BooleanSetting pausePlayer = add(new BooleanSetting("Show Player", "Show your character beside the pause menu", true))
             .visibleWhen(customPause::get);
+    private final com.nightshade.module.setting.ActionSetting tour = add(new com.nightshade.module.setting.ActionSetting("Tour",
+            "Show the first-launch tour of the main menu again", "Show Again", () -> {
+                com.nightshade.NightshadeClient.client().config().clearFlag("tourDone");
+                com.nightshade.NightshadeClient.client().config().saveDirty();
+                if (mc.level == null) {
+                    mc.setScreen(createMenu());
+                } else {
+                    com.nightshade.NightshadeClient.client().notifications().info("Tour", "It will show next time you open the main menu");
+                }
+            }));
     private final BooleanSetting animate = add(new BooleanSetting("Animate Background", "Let the panorama spin and the backgrounds drift (turn off for a still background)", true));
     private final BooleanSetting updates = add(new BooleanSetting("Check For Updates", "Look on Modrinth for a newer Nightshade when the main menu opens (reads the public version list only)", true));
     private final BooleanSetting betas = add(new BooleanSetting("Include Betas", "Also tell you about beta versions", false))

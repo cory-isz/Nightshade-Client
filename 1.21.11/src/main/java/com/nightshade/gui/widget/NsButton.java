@@ -97,6 +97,11 @@ public final class NsButton {
         return RenderUtil.isHovered(mouseX, mouseY, x, y, x + w, y + h);
     }
 
+    /** Centre of the button as last drawn (for tests). */
+    public int[] center() {
+        return new int[]{x + w / 2, y + h / 2};
+    }
+
     /** Runs the action if the click hits this button. */
     public boolean click(double mouseX, double mouseY, int button) {
         if (button == 0 && enabled && w > 0 && isHovered(mouseX, mouseY)) {

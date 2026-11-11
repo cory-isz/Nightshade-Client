@@ -371,6 +371,12 @@ public final class ConfigManager {
         }
     }
 
+    public void clearFlag(String flag) {
+        if (flags.remove(flag)) {
+            markClientDirty();
+        }
+    }
+
     public Path getRoot() {
         return root;
     }
