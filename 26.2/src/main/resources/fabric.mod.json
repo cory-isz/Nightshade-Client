@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "nightshade",
+  "version": "${version}",
+  "name": "Nightshade Client",
+  "description": "A modular, performance-focused PvP client for Fabric, Minecraft 26.2.",
+  "authors": ["Nightshade Client Developers"],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/nightshade/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.nightshade.NightshadeClient"]
+  },
+  "mixins": [
+    "nightshade.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "${minecraft_range}",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

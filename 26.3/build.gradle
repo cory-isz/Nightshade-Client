@@ -1,0 +1,89 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+def edition = "noauto"
+
+loom {
+    mods {
+        "nightshade" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+processResources {
+    inputs.property "edition", edition
+    inputs.property "version", project.version
+    inputs.property "minecraft_range", project.minecraft_range
+    inputs.property "loader_version", project.loader_version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+               "minecraft_range": project.minecraft_range,
+               "loader_version": project.loader_version
+    }
+    filesMatching("assets/nightshade/edition.properties") {
+        expand "edition": edition,
+               "msClientId": ""
+    }
+}
+
+def targetJavaVersion = 25
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release.set(targetJavaVersion)
+    it.options.compilerArgs.addAll(["-Xlint:deprecation", "-Xlint:unchecked", "-Xmaxerrs", "2000"])
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+    withSourcesJar()
+}
+
+
+// Release file names: Nightshade-Client<version>.jar (e.g. Nightshade-Client1.12.0.jar)
+jar {
+    archiveFileName = "${project.archives_base_name}${project.mod_version}-${project.mc_tag}.jar"
+}
+sourcesJar {
+    archiveFileName = "${project.archives_base_name}${project.mod_version}-${project.mc_tag}-sources.jar"
+}
+
+// Production smoke test: launches the remapped release jar with a real Fabric Loader on intermediary names,
+// exactly like a launcher (e.g. OneClient) would. Not part of the normal build.
+configurations {
+    productionRuntimeMods {
+        transitive = false
+    }
+}
+
+dependencies {
+    productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+tasks.register("runProductionClient", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+    mods.from(tasks.named("jar"))
+    mods.from(configurations.productionRuntimeMods)
+    runDir = project.layout.projectDirectory.dir("run-production")
+    useXVFB = false
+    jvmArgs.add("-Dfabric.log.level=info")
+    if (project.hasProperty("quickPlayWorld")) {
+        programArgs.addAll(["--quickPlaySingleplayer", project.property("quickPlayWorld").toString()])
+    }
+}

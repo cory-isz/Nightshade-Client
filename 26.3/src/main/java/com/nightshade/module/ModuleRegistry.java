@@ -1,0 +1,156 @@
+package com.nightshade.module;
+
+import com.nightshade.module.hud.MemoryHud;
+import com.nightshade.module.performance.BlockEntityCulling;
+import com.nightshade.module.performance.DynamicFps;
+import com.nightshade.module.pvp.AutoGG;
+import com.nightshade.module.pvp.ShieldStatus;
+import com.nightshade.module.pvp.CooldownHud;
+import com.nightshade.module.pvp.DurabilityWarning;
+import com.nightshade.module.pvp.HitSounds;
+import com.nightshade.module.pvp.ItemView;
+import com.nightshade.module.pvp.LowHealthWarning;
+import com.nightshade.module.pvp.ReachDisplay;
+import com.nightshade.module.pvp.TotemPopCounter;
+import com.nightshade.module.utility.ToastControl;
+import com.nightshade.module.visual.NoFog;
+import com.nightshade.manager.ModuleManager;
+import com.nightshade.module.hud.ArmorStatusHud;
+import com.nightshade.module.hud.CoordinatesHud;
+import com.nightshade.module.hud.CpsHud;
+import com.nightshade.module.hud.FpsPingHud;
+import com.nightshade.module.hud.KeystrokesHud;
+import com.nightshade.module.hud.ClockHud;
+import com.nightshade.module.hud.ComboCounterHud;
+import com.nightshade.module.hud.CompassHud;
+import com.nightshade.module.hud.ItemCounterHud;
+import com.nightshade.module.hud.ModuleListHud;
+import com.nightshade.module.hud.PotionEffectsHud;
+import com.nightshade.module.hud.ServerAddressHud;
+import com.nightshade.module.hud.TargetHud;
+import com.nightshade.module.hud.WatermarkHud;
+import com.nightshade.module.interfaces.ClickGuiModule;
+import com.nightshade.module.interfaces.HudEditorModule;
+import com.nightshade.module.interfaces.MainMenuModule;
+import com.nightshade.module.interfaces.ProfilesModule;
+import com.nightshade.module.interfaces.Notifications;
+import com.nightshade.module.performance.EffectReducer;
+import com.nightshade.module.performance.EntityRenderLimiter;
+import com.nightshade.module.performance.ParticleOptimizer;
+import com.nightshade.module.utility.ChatTimestamps;
+import com.nightshade.module.utility.ChatSearchModule;
+import com.nightshade.module.utility.ChatTools;
+import com.nightshade.module.utility.Freelook;
+import com.nightshade.module.utility.WaypointsModule;
+import com.nightshade.module.hud.WaypointsHud;
+import com.nightshade.module.utility.ToggleSprint;
+import com.nightshade.module.utility.Zoom;
+import com.nightshade.module.visual.BlockOutline;
+import com.nightshade.module.visual.CustomCrosshair;
+import com.nightshade.module.visual.HitColor;
+import com.nightshade.module.visual.OwnNametag;
+import com.nightshade.module.visual.Fullbright;
+import com.nightshade.module.visual.LowFire;
+import com.nightshade.module.visual.NoHurtCam;
+import com.nightshade.module.visual.TimeChanger;
+import com.nightshade.module.visual.WeatherChanger;
+
+/** Single place where every module is registered. Add new modules here. */
+public final class ModuleRegistry {
+    private ModuleRegistry() {
+    }
+
+    public static void registerAll(ModuleManager manager) {
+        // HUD
+        manager.register(new WatermarkHud());
+        manager.register(new KeystrokesHud());
+        manager.register(new FpsPingHud());
+        manager.register(new ArmorStatusHud());
+        manager.register(new CpsHud());
+        manager.register(new CoordinatesHud());
+        manager.register(new ModuleListHud());
+        manager.register(new PotionEffectsHud());
+        manager.register(new CompassHud());
+        manager.register(new ItemCounterHud());
+        manager.register(new ClockHud());
+        manager.register(new ServerAddressHud());
+        manager.register(new ComboCounterHud());
+        manager.register(new TargetHud());
+        manager.register(new MemoryHud());
+        manager.register(new com.nightshade.module.hud.SpeedHud());
+        manager.register(new com.nightshade.module.visual.Cosmetics());
+        manager.register(new com.nightshade.module.utility.Snaplook());
+        manager.register(new com.nightshade.module.utility.NickHider());
+        manager.register(new com.nightshade.module.hud.StopwatchHud());
+        manager.register(new com.nightshade.module.utility.StopwatchKey());
+        manager.register(new com.nightshade.module.hud.PackDisplayHud());
+        manager.register(new com.nightshade.module.visual.TntCountdown());
+        manager.register(new com.nightshade.module.pvp.HitParticles());
+        manager.register(new com.nightshade.module.utility.FightReplay());
+        manager.register(new com.nightshade.module.utility.SaveReplay());
+        manager.register(new com.nightshade.module.hud.BiomeHud());
+        manager.register(new com.nightshade.module.hud.LightLevelHud());
+        manager.register(new com.nightshade.module.hud.DayCounterHud());
+        manager.register(new com.nightshade.module.hud.RotationHud());
+        manager.register(new com.nightshade.module.hud.SaturationHud());
+        manager.register(new com.nightshade.module.hud.SessionStatsHud());
+        // Visual
+        manager.register(new Fullbright());
+        manager.register(new CustomCrosshair());
+        manager.register(new NoHurtCam());
+        manager.register(new LowFire());
+        manager.register(new TimeChanger());
+        manager.register(new WeatherChanger());
+        manager.register(new BlockOutline());
+        manager.register(new HitColor());
+        manager.register(new OwnNametag());
+        manager.register(new NoFog());
+        manager.register(new com.nightshade.module.visual.ItemPhysics());
+        manager.register(new com.nightshade.module.visual.ScoreboardTweaks());
+        // Performance
+        manager.register(new ParticleOptimizer());
+        manager.register(new EntityRenderLimiter());
+        manager.register(new EffectReducer());
+        manager.register(new DynamicFps());
+        manager.register(new BlockEntityCulling());
+        manager.register(new com.nightshade.module.performance.AnimationOptimizer());
+        manager.register(new com.nightshade.module.performance.WeatherOptimizer());
+        manager.register(new com.nightshade.module.performance.ShadowCulling());
+        manager.register(new com.nightshade.module.performance.MenuOptimizer());
+        manager.register(new com.nightshade.module.performance.NameTagCulling());
+        manager.register(new com.nightshade.module.performance.MenuFpsCap());
+        // Utility
+        manager.register(new Zoom());
+        manager.register(new ToggleSprint());
+        manager.register(new ChatTimestamps());
+        manager.register(new Freelook());
+        manager.register(new WaypointsHud());
+        manager.register(new WaypointsModule());
+        manager.register(new ChatTools());
+        manager.register(new ChatSearchModule());
+        manager.register(new ToastControl());
+        // PvP
+        manager.register(new ReachDisplay());
+        manager.register(new CooldownHud());
+        manager.register(new HitSounds());
+        manager.register(new TotemPopCounter());
+        manager.register(new DurabilityWarning());
+        manager.register(new LowHealthWarning());
+        manager.register(new ItemView());
+        manager.register(new AutoGG());
+        manager.register(new ShieldStatus());
+        manager.register(new com.nightshade.module.pvp.Hitboxes());
+        manager.register(new com.nightshade.module.pvp.HealthTags());
+        manager.register(new com.nightshade.module.pvp.DamageIndicators());
+        manager.register(new com.nightshade.module.pvp.KillEffects());
+        // Interface
+        manager.register(new ClickGuiModule());
+        manager.register(new HudEditorModule());
+        manager.register(new com.nightshade.module.interfaces.VanillaHud());
+        manager.register(new Notifications());
+        manager.register(new MainMenuModule());
+        manager.register(new ProfilesModule());
+
+    }
+
+}
