@@ -24,10 +24,18 @@ public final class CustomCrosshair extends Module {
     private static boolean registered;
 
     private final ModeSetting style = add(new ModeSetting("Style", "Crosshair shape (Vanilla / Pack keeps the vanilla or resource pack crosshair)",
-            "Cross", "Cross", "Dot", "Cross + Dot", "Square", "T-Shape", "Vanilla / Pack"));
-    private final NumberSetting size = add(new NumberSetting("Size", "Arm length", 5, 1, 15, 1, "px"));
-    private final NumberSetting gap = add(new NumberSetting("Gap", "Distance from the centre", 2, 0, 10, 1, "px"));
-    private final NumberSetting thickness = add(new NumberSetting("Thickness", "Line thickness", 1, 1, 4, 1, "px"));
+            "Cross", "Cross", "Dot", "Cross + Dot", "Square", "T-Shape", "Custom", "Vanilla / Pack"));
+    // "Custom": a pixel crosshair drawn in the Crosshair Editor, stored as hex (one bit per cell).
+    private final com.nightshade.module.setting.TextSetting pattern = add(new com.nightshade.module.setting.TextSetting("Pattern",
+            "The custom crosshair's pixels", com.nightshade.render.CrosshairPattern.preset("Gap Cross").toHex(), 64)).visibleWhen(() -> false);
+    private final com.nightshade.module.setting.ActionSetting editor = add(new com.nightshade.module.setting.ActionSetting("Crosshair Editor",
+            "Draw your own crosshair pixel by pixel, pick a preset or paste a code", "Open Editor",
+            () -> mc.gui.setScreen(new com.nightshade.gui.menu.CrosshairEditorScreen(mc.gui.screen()))));
+    private final NumberSetting pixelSize = add(new NumberSetting("Pixel Size", "Size of each pixel of the custom crosshair, in screen pixels", 2, 1, 6, 1, "px"))
+            .visibleWhen(() -> style.is("Custom"));
+    private final NumberSetting size = add(new NumberSetting("Size", "Arm length", 5, 1, 15, 1, "px")).visibleWhen(this::shaped);
+    private final NumberSetting gap = add(new NumberSetting("Gap", "Distance from the centre", 2, 0, 10, 1, "px")).visibleWhen(this::shaped);
+    private final NumberSetting thickness = add(new NumberSetting("Thickness", "Line thickness", 1, 1, 4, 1, "px")).visibleWhen(this::shaped);
     private final ColorSetting color = add(new ColorSetting("Color", "Crosshair colour", 0xFFFFFFFF));
     private final BooleanSetting outline = add(new BooleanSetting("Outline", "Draw a dark outline for contrast", true));
     private final ColorSetting outlineColor = add(new ColorSetting("Outline Color", "Outline colour", 0xC0000000)).visibleWhen(outline::get);
@@ -108,11 +116,52 @@ public final class CustomCrosshair extends Module {
         return true;
     }
 
+    private boolean shaped() {
+        return !style.is("Custom") && !style.is("Vanilla / Pack");
+    }
+
+    /** GUI pixels to real screen pixels. */
+    public static float guiScale() {
+        int scaled = mc.getWindow().getGuiScaledWidth();
+        return scaled <= 0 ? 1f : (float) mc.getWindow().getWidth() / scaled;
+    }
+
+    public com.nightshade.render.CrosshairPattern pattern() {
+        com.nightshade.render.CrosshairPattern p = com.nightshade.render.CrosshairPattern.fromHex(pattern.get());
+        return p == null ? com.nightshade.render.CrosshairPattern.preset("Gap Cross") : p;
+    }
+
+    /** Saves a pattern from the editor and switches the style to Custom. */
+    public void setPattern(com.nightshade.render.CrosshairPattern p) {
+        pattern.set(p.toHex());
+        style.set("Custom");
+    }
+
+    public ColorSetting colorSetting() {
+        return color;
+    }
+
+    public BooleanSetting outlineSetting() {
+        return outline;
+    }
+
+    public ColorSetting outlineColorSetting() {
+        return outlineColor;
+    }
+
+    public NumberSetting pixelSizeSetting() {
+        return pixelSize;
+    }
+
     private void draw(GuiGraphicsExtractor context) {
         int cx = context.guiWidth() / 2;
         int cy = context.guiHeight() / 2;
         int col = targetColor.get() && mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.ENTITY
                 ? targetColorValue.argb() : color.argb();
+        if (style.is("Custom")) {
+            pattern().draw(context, context.guiWidth() / 2f, context.guiHeight() / 2f, pixelSize.intValue(), col, outline.get(), outlineColor.argb());
+            return;
+        }
         int s = size.intValue();
         int g = gap.intValue();
         int t = thickness.intValue();

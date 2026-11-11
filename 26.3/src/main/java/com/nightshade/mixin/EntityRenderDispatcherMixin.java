@@ -14,7 +14,7 @@ public abstract class EntityRenderDispatcherMixin /* targets EntityRenderManager
     /** Target: public boolean shouldRender(Entity, Frustum, double cameraX, double cameraY, double cameraZ) */
     @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
     private void nightshade$limitEntities(Entity entity, Frustum frustum, double x, double y, double z, float partialTick, CallbackInfoReturnable<Boolean> cir) {
-        if (EntityRenderLimiter.shouldCull(entity, x, y, z)) {
+        if (EntityRenderLimiter.shouldCull(entity, x, y, z) || com.nightshade.module.performance.EntityCulling.shouldCull(entity, x, y, z)) {
             cir.setReturnValue(false);
         }
     }

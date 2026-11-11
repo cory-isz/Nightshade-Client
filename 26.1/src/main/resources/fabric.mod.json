@@ -6,7 +6,7 @@
   "description": "A modular, performance-focused PvP client for Fabric, Minecraft 26.1.",
   "authors": ["Nightshade Client Developers"],
   "contact": {},
-  "license": "MIT",
+  "license": "All-Rights-Reserved",
   "icon": "assets/nightshade/icon.png",
   "environment": "client",
   "entrypoints": {

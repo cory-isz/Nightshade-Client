@@ -19,6 +19,9 @@ public final class Snaplook extends Module {
 
     @Override
     protected void onEnable() {
+        if (mc.options == null) {
+            return; // restored from the config while the game is still starting
+        }
         previous = mc.options.getCameraType();
         mc.options.setCameraType(view.is("Front") ? CameraType.THIRD_PERSON_FRONT : CameraType.THIRD_PERSON_BACK);
         EffectProbe.hit("Snaplook");
@@ -26,7 +29,7 @@ public final class Snaplook extends Module {
 
     @Override
     protected void onDisable() {
-        if (previous != null) {
+        if (previous != null && mc.options != null) {
             mc.options.setCameraType(previous);
         }
         previous = null;

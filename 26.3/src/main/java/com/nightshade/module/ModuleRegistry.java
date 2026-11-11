@@ -116,6 +116,7 @@ public final class ModuleRegistry {
         manager.register(new com.nightshade.module.performance.AnimationOptimizer());
         manager.register(new com.nightshade.module.performance.WeatherOptimizer());
         manager.register(new com.nightshade.module.performance.ShadowCulling());
+        manager.register(new com.nightshade.module.performance.EntityCulling());
         manager.register(new com.nightshade.module.performance.MenuOptimizer());
         manager.register(new com.nightshade.module.performance.NameTagCulling());
         manager.register(new com.nightshade.module.performance.MenuFpsCap());

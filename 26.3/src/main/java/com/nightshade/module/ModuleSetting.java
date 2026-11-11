@@ -62,6 +62,11 @@ public abstract class ModuleSetting<T> {
         return value.equals(defaultValue);
     }
 
+    /** False for settings that hold no value of their own (e.g. a button) and are never saved. */
+    public boolean persistent() {
+        return true;
+    }
+
     public boolean isVisible() {
         return visibility.getAsBoolean();
     }

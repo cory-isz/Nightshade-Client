@@ -18,5 +18,6 @@ public final class StopwatchKey extends Module {
     @Override
     public void onAction() {
         StopwatchHud.press();
+        com.nightshade.util.EffectProbe.hit("Stopwatch Key");
     }
 }

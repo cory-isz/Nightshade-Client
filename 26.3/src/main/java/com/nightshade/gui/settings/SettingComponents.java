@@ -27,6 +27,9 @@ public final class SettingComponents {
         if (setting instanceof com.nightshade.module.setting.TextSetting s) {
             return new TextComponent(s);
         }
+        if (setting instanceof com.nightshade.module.setting.ActionSetting s) {
+            return new ActionComponent(s);
+        }
         throw new IllegalArgumentException("No GUI component for setting type " + setting.getClass().getName());
     }
 }

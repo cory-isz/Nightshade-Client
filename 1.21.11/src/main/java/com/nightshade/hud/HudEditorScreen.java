@@ -40,6 +40,15 @@ public final class HudEditorScreen extends NsScreen {
     private boolean snappedVertical;
     private boolean snappedHorizontal;
     private int resetX;
+    private int layoutsX;
+    private int layoutsW;
+    private boolean layoutsOpen;
+    @Nullable
+    private HudPresets.Snapshot layoutUndo;
+    private String layoutHint = "";
+    private record LayoutPill(String name, int x, int y, int w) {
+    }
+    private final java.util.List<LayoutPill> layoutPills = new java.util.ArrayList<>();
     private int doneX;
     private int buttonsY;
 
@@ -158,9 +167,11 @@ public final class HudEditorScreen extends NsScreen {
         }
         String snapLabel = "Snap: " + (settings != null && settings.snap() ? "On" : "Off");
         int resetW = GuiDraw.pillWidth("Reset Layout");
+        String layoutsLabel = layoutsOpen ? "Layouts ▴" : "Layouts ▾";
+        layoutsW = GuiDraw.pillWidth(layoutsLabel);
         snapW = GuiDraw.pillWidth(snapLabel);
         int doneW = GuiDraw.pillWidth("Done");
-        int buttonsW = resetW + snapW + doneW + 12;
+        int buttonsW = resetW + layoutsW + snapW + doneW + 18;
         toolbarW = Math.max(buttonsW, Math.min(Fonts.width(help), width - 20)) + 16;
         // Hidden components as chips (click to show), wrapped inside the toolbar.
         chips.clear();
@@ -178,6 +189,31 @@ public final class HudEditorScreen extends NsScreen {
             cx += cw + 4;
         }
         int barH = hidden.isEmpty() ? 40 : cy + 18;
+        // Layout choices sit in their own row under the buttons while "Layouts" is open.
+        int layoutRow = 0;
+        layoutPills.clear();
+        if (layoutsOpen) {
+            java.util.List<String> names = new java.util.ArrayList<>(HudPresets.PRESETS.keySet());
+            if (layoutUndo != null) {
+                names.add("Undo");
+            }
+            int total = -4;
+            for (String n : names) {
+                total += GuiDraw.pillWidth(n) + 4;
+            }
+            int lx = (toolbarW - total) / 2;
+            for (String n : names) {
+                int lw = GuiDraw.pillWidth(n);
+                layoutPills.add(new LayoutPill(n, lx, 38, lw));
+                lx += lw + 4;
+            }
+            layoutRow = 34;
+            for (int i = 0; i < chips.size(); i++) {
+                Chip c = chips.get(i);
+                chips.set(i, new Chip(c.module(), c.x(), c.y() + layoutRow, c.w()));
+            }
+            barH += layoutRow;
+        }
         int[] candidates = {height / 2 - barH / 2, Math.max(4, height - barH - 58), 46, height / 4};
         int best = candidates[0];
         int bestCover = Integer.MAX_VALUE;
@@ -209,17 +245,36 @@ public final class HudEditorScreen extends NsScreen {
         Fonts.drawCentered(ctx, Fonts.trim(help, toolbarW - 12), width / 2, toolbarY + 6, ColorUtil.fade(Theme.TEXT_MUTED, alpha), false);
         buttonsY = toolbarY + 19;
         resetX = (width - buttonsW) / 2;
-        snapX = resetX + resetW + 6;
+        layoutsX = resetX + resetW + 6;
+        snapX = layoutsX + layoutsW + 6;
         doneX = snapX + snapW + 6;
         GuiDraw.pill(ctx, resetX, buttonsY, "Reset Layout", 16, RenderUtil.isHovered(mouseX, mouseY, resetX, buttonsY, resetX + resetW, buttonsY + 16),
                 ColorUtil.fade(Theme.WARNING, alpha), ColorUtil.fade(Theme.BACKGROUND, alpha));
+        GuiDraw.pill(ctx, layoutsX, buttonsY, layoutsLabel, 16, RenderUtil.isHovered(mouseX, mouseY, layoutsX, buttonsY, layoutsX + layoutsW, buttonsY + 16),
+                ColorUtil.fade(Theme.TEXT, alpha), ColorUtil.fade(layoutsOpen ? ColorUtil.withAlpha(Theme.accent(), 0xB0) : Theme.PANEL, alpha));
+        if (layoutsOpen) {
+            String hint = "Pick a layout - it turns on the components it uses";
+            for (LayoutPill p : layoutPills) {
+                int x1 = toolbarX + p.x();
+                int y1 = toolbarY + p.y();
+                boolean hov = RenderUtil.isHovered(mouseX, mouseY, x1, y1, x1 + p.w(), y1 + 16);
+                boolean undoPill = p.name().equals("Undo");
+                GuiDraw.pill(ctx, x1, y1, p.name(), 16, hov, ColorUtil.fade(Theme.TEXT, alpha),
+                        ColorUtil.fade(undoPill ? ColorUtil.withAlpha(Theme.WARNING, 0x60) : hov ? ColorUtil.withAlpha(Theme.accent(), 0x90) : 0x30FFFFFF, alpha));
+                if (hov) {
+                    hint = undoPill ? "Go back to how it was before the layout" : HudPresets.PRESETS.get(p.name()).description();
+                }
+            }
+            layoutHint = hint;
+            Fonts.drawCentered(ctx, Fonts.trim(layoutHint, toolbarW - 12), width / 2, toolbarY + 58, ColorUtil.fade(Theme.TEXT_DIM, alpha), false);
+        }
         GuiDraw.pill(ctx, snapX, buttonsY, snapLabel, 16, RenderUtil.isHovered(mouseX, mouseY, snapX, buttonsY, snapX + snapW, buttonsY + 16),
                 ColorUtil.fade(Theme.TEXT, alpha), ColorUtil.fade(Theme.PANEL, alpha));
         GuiDraw.pill(ctx, doneX, buttonsY, "Done", 16, RenderUtil.isHovered(mouseX, mouseY, doneX, buttonsY, doneX + doneW, buttonsY + 16),
                 ColorUtil.fade(Theme.TEXT, alpha), ColorUtil.fade(Theme.accent(), alpha));
         if (!chips.isEmpty()) {
-            ctx.fill(toolbarX + 8, toolbarY + 39, toolbarX + toolbarW - 8, toolbarY + 40, ColorUtil.fade(0x20FFFFFF, alpha));
-            Fonts.draw(ctx, "Hidden \u00B7 click to show", toolbarX + 8, toolbarY + 42, ColorUtil.fade(Theme.TEXT_DIM, alpha), false);
+            ctx.fill(toolbarX + 8, toolbarY + 39 + layoutRow, toolbarX + toolbarW - 8, toolbarY + 40 + layoutRow, ColorUtil.fade(0x20FFFFFF, alpha));
+            Fonts.draw(ctx, "Hidden \u00B7 click to show", toolbarX + 8, toolbarY + 42 + layoutRow, ColorUtil.fade(Theme.TEXT_DIM, alpha), false);
             for (Chip chip : chips) {
                 int x1 = toolbarX + chip.x();
                 int y1 = toolbarY + chip.y();
@@ -227,6 +282,24 @@ public final class HudEditorScreen extends NsScreen {
                 RenderUtil.roundedRect(ctx, x1, y1, x1 + chip.w(), y1 + 13, 6, ColorUtil.fade(hov ? ColorUtil.withAlpha(Theme.accent(), 0x70) : 0x30FFFFFF, alpha));
                 Fonts.draw(ctx, chip.module().getName(), x1 + 7, y1 + 3, ColorUtil.fade(hov ? Theme.TEXT : Theme.TEXT_MUTED, alpha), false);
             }
+        }
+    }
+
+    /** Applies a layout (or undoes the last one); "Undo" restores the state from before the last layout. */
+    public void applyLayout(String name) {
+        if (name.equals("Undo")) {
+            if (layoutUndo != null) {
+                HudPresets.restore(layoutUndo);
+                layoutUndo = null;
+                manager.notifications().info("HUD Editor", "Layout undone");
+            }
+            return;
+        }
+        layoutsOpen = true;
+        HudPresets.Snapshot before = HudPresets.snapshot();
+        if (HudPresets.apply(name)) {
+            layoutUndo = before;
+            manager.notifications().info("HUD Editor", name + " layout applied");
         }
     }
 
@@ -264,6 +337,20 @@ public final class HudEditorScreen extends NsScreen {
                 int y1 = toolbarY + chip.y();
                 if (RenderUtil.isHovered(mouseX, mouseY, x1, y1, x1 + chip.w(), y1 + 13)) {
                     manager.modules().setEnabled(chip.module(), true);
+                    return true;
+                }
+            }
+        }
+        if (button == 0 && RenderUtil.isHovered(mouseX, mouseY, layoutsX, buttonsY, layoutsX + layoutsW, buttonsY + 16)) {
+            layoutsOpen = !layoutsOpen;
+            return true;
+        }
+        if (button == 0 && layoutsOpen) {
+            for (LayoutPill p : layoutPills) {
+                int x1 = toolbarX + p.x();
+                int y1 = toolbarY + p.y();
+                if (RenderUtil.isHovered(mouseX, mouseY, x1, y1, x1 + p.w(), y1 + 16)) {
+                    applyLayout(p.name());
                     return true;
                 }
             }

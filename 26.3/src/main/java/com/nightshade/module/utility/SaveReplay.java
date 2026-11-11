@@ -17,5 +17,6 @@ public final class SaveReplay extends Module {
     @Override
     public void onAction() {
         FightReplay.saveClip();
+        com.nightshade.util.EffectProbe.hit("Save Replay");
     }
 }

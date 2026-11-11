@@ -290,6 +290,9 @@ public final class ConfigManager {
         json.addProperty("bindMode", module.getBindMode().name());
         JsonObject settings = new JsonObject();
         for (ModuleSetting<?> setting : module.getSettings()) {
+            if (!setting.persistent()) {
+                continue;
+            }
             settings.add(setting.getName(), setting.toJson());
         }
         json.add("settings", settings);

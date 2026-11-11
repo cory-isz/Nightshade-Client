@@ -1,6 +1,6 @@
 # Nightshade Client
 
-**A clean, modern PvP client for Fabric.** Beautiful menus, a drag-and-drop HUD, fight replays, client-side cosmetics and 75+ modules, all in a single mod that works in any launcher.
+**A clean, modern PvP client for Fabric.** Beautiful menus, a drag-and-drop HUD, fight replays, client-side cosmetics, and 75+ modules, all in a single mod that works in any launcher.
 
 **Minecraft 1.21.11 · 26.1 · 26.2 · 26.3** | Requires **Fabric API** | Sodium compatible
 
@@ -12,10 +12,10 @@
 
 - **Menus**: a modern main menu with your recent worlds and servers, a redesigned pause menu, and a modules menu with category tabs, search and glass module cards. Three menu styles to choose from.
 - **Animated backgrounds**: Aurora Peaks, Night Forest, Deep Space and Nightshade Sky, all following your client colour.
-- **HUD**: drag, scale and snap every element in the HUD Editor, with four HUD styles (Accent, Glass, Minimal, Classic).
-- **PvP**: Hitboxes, Health Tags, Damage Indicators, Kill Effects, Hit Sounds, Hit Color, Reach Display, Shield Status, Totem Pop Counter, Custom Crosshair with custom cooldown bars, and more.
+- **HUD**: drag, scale and snap every element in the HUD Editor, with four HUD styles (Accent, Glass, Minimal, Classic) and one-click layouts (Minimal, PvP, Streamer, Survival).
+- **PvP**: Hitboxes, Health Tags, Damage Indicators, Kill Effects, Hit Sounds, Hit Color, Reach Display, Shield Status, Totem Pop Counter, Custom Crosshair with a pixel Crosshair Editor, share codes and custom cooldown bars, and more.
 - **Fight Replay**: keeps the last 30 seconds of the players around you; save a clip with one key and rewatch it.
-- **Performance**: Shadow Culling, Name Tag Culling, Entity Render Limiter, Block Entity Culling, Particle Optimizer, Dynamic FPS and more.
+- **Performance**: Entity Culling, Shadow Culling, Name Tag Culling, Entity Render Limiter, Block Entity Culling, Particle Optimizer, Dynamic FPS and more.
 - **Quality of life**: Zoom, Freelook, Snaplook, Toggle Sprint, Waypoints, chat tools, screenshot manager, per-server profiles, Nick Hider, an in-game mod menu and an account switcher.
 - **Cosmetics**: capes and elytra skins that are fully client-side; only you see them.
 - **Fonts**: Inter, Poppins or the Minecraft font, optionally applied to the whole game.
@@ -47,7 +47,7 @@ cd 26.3
 ./gradlew jar
 ```
 
-The jar is written to `build/libs/`, for example `Nightshade-Client1.20.1-1.21.11.jar`. On Windows use `gradlew.bat` instead of `./gradlew`.
+The jar is written to `build/libs/`, for example `Nightshade-Client1.21.0-1.21.11.jar`. On Windows use `gradlew.bat` instead of `./gradlew`.
 
 ## Installing
 
@@ -57,7 +57,7 @@ The jar is written to `build/libs/`, for example `Nightshade-Client1.20.1-1.21.1
 
 ## License
 
-[MIT](LICENSE)
+All Rights Reserved. See [LICENSE](LICENSE).
 
 ---
 

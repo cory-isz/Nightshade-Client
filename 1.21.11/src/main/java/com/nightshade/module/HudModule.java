@@ -201,6 +201,14 @@ public abstract class HudModule extends Module {
         }
     }
 
+    /** Places the element by fraction of the free space (0 = left/top, 1 = right/bottom), as a HUD layout does. */
+    public void setFractionPosition(double x, double y) {
+        posX = clamp01(x);
+        posY = clamp01(y);
+        custom = true;
+        markDirty();
+    }
+
     public void setScale(double value) {
         scale.set(value);
     }
