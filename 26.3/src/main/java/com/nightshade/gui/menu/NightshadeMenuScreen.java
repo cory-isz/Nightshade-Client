@@ -62,6 +62,8 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
     private final List<ServerData> servers = new ArrayList<>();
     private int worldTotal;
     private int serverTotal;
+    private final net.minecraft.client.multiplayer.ServerStatusPinger pinger = new net.minecraft.client.multiplayer.ServerStatusPinger();
+    private boolean serversPinged;
     private boolean worldsLoading = true;
     private int selectedRow;
     private long lastRowClick;
@@ -154,7 +156,14 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        pinger.tick();
+    }
+
+    @Override
     public void removed() {
+        pinger.removeAll();
         icons.values().forEach(icon -> {
             if (!icon.isClosed()) {
                 icon.close(); // 26.3 throws when an icon is closed twice
@@ -179,6 +188,10 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
                 all.sort((a, b) -> Boolean.compare(b.ip.equalsIgnoreCase(lastPlayed.id()), a.ip.equalsIgnoreCase(lastPlayed.id())));
             }
             servers.addAll(all.subList(0, Math.min(MAX_ROWS, all.size())));
+            if (!serversPinged) {
+                serversPinged = true; // live player counts and ping for the recent servers
+                servers.forEach(s -> ServersScreen.ping(pinger, s));
+            }
         } catch (Exception e) {
             serverTotal = 0;
         }
@@ -479,7 +492,10 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
             } else {
                 ServerData srv = servers.get(i);
                 title = srv.name;
-                sub = srv.ip;
+                String status = ServersScreen.shortStatus(srv);
+                sub = status != null ? status : srv.ip;
+                int dot = ServersScreen.statusColor(srv);
+                RenderUtil.roundedRect(ctx, sx1 + rowH - 6, y + rowH - 9, sx1 + rowH - 1, y + rowH - 4, 2, ColorUtil.fade(dot, a));
             }
             int tx = sx1 + rowH + 5;
             Fonts.draw(ctx, Fonts.trim(title, sx2 - tx - 16), tx, y + 4, ColorUtil.fade(Theme.TEXT, a), false);

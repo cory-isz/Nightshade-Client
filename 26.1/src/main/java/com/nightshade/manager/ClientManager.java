@@ -36,6 +36,12 @@ import net.minecraft.resources.Identifier;
 public final class ClientManager {
     private final Minecraft mc = Minecraft.getInstance();
     private final HudRenderEvent hudRenderEvent = new HudRenderEvent();
+    /** Total time spent drawing the HUD and frames drawn, for the HUD benchmark. */
+    public static long hudNanos;
+    public static long hudFrames;
+    /** Total time Nightshade spends in its end-of-tick work, and ticks counted, for the benchmark. */
+    public static long tickNanos;
+    public static long ticks;
     private final WorldRenderEvent worldRenderEvent = new WorldRenderEvent();
 
     private EventManager events;
@@ -84,7 +90,10 @@ public final class ClientManager {
     private void registerFabricHooks() {
         ClientTickEvents.START_CLIENT_TICK.register(client -> events.post(TickEvent.Pre.INSTANCE));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            long tickStart = System.nanoTime();
             events.post(TickEvent.Post.INSTANCE);
+            tickNanos += System.nanoTime() - tickStart;
+            ticks++;
             config.tick();
         });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("nightshade", "hud"), (context, tickCounter) -> {
@@ -93,8 +102,11 @@ public final class ClientManager {
                 return;
             }
             float tickDelta = tickCounter.getGameTimeDeltaPartialTick(true);
+            long start = System.nanoTime();
             hud.render(context, tickDelta);
             events.post(hudRenderEvent.set(context, tickDelta));
+            hudNanos += System.nanoTime() - start;
+            hudFrames++;
         });
         LevelRenderEvents.END_MAIN.register(context -> events.post(worldRenderEvent.set(context)));
         LevelRenderEvents.BEFORE_BLOCK_OUTLINE.register((context, outline) ->

@@ -145,6 +145,9 @@ public final class ModuleRegistry {
         manager.register(new DurabilityWarning());
         manager.register(new LowHealthWarning());
         manager.register(new ItemView());
+        manager.register(new com.nightshade.module.visual.OldAnimations());
+        manager.register(new com.nightshade.module.performance.FpsBoost());
+        manager.register(new com.nightshade.module.pvp.HitFeedback());
         manager.register(new AutoGG());
         manager.register(new ShieldStatus());
         manager.register(new com.nightshade.module.pvp.Hitboxes());

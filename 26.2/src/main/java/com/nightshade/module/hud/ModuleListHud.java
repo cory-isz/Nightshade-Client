@@ -100,8 +100,8 @@ public final class ModuleListHud extends HudModule {
                 if ("Classic".equals(style)) {
                     RenderUtil.rect(context, x - 3, top, x + textWidth + 3, top + lineHeight, ColorUtil.fade(backgroundColor.argb(), progress));
                 } else if (!"Minimal".equals(style)) {
-                    RenderUtil.roundedRect(context, x - 3, top, x + textWidth + 3, top + lineHeight - 1, 3,
-                            ColorUtil.fade(ColorUtil.withAlpha(backgroundColor.argb(), Math.min(255, ColorUtil.alpha(backgroundColor.argb()) + 0x18)), progress));
+                    com.nightshade.render.PanelCache.shape(context, x - 3, top, x + textWidth + 3, top + lineHeight - 1, 3,
+                            ColorUtil.fade(ColorUtil.withAlpha(backgroundColor.argb(), Math.min(255, ColorUtil.alpha(backgroundColor.argb()) + 0x18)), progress), false);
                 }
             }
             if (accentBar.get()) {

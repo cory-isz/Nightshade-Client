@@ -322,13 +322,20 @@ public final class PixelIcons {
     public static void menu(GuiGraphicsExtractor ctx, String[] rows, int x, int y, int scale, int color, int accent) {
         for (int row = 0; row < rows.length; row++) {
             String line = rows[row];
-            for (int col = 0; col < line.length(); col++) {
+            int col = 0;
+            while (col < line.length()) {
                 char c = line.charAt(col);
                 if (c == '#' || c == 'o' || c == '+') {
-                    int px = x + col * scale;
+                    int end = col + 1;
+                    while (end < line.length() && line.charAt(end) == c) {
+                        end++; // one fill per run of same-coloured pixels
+                    }
                     int py = y + row * scale;
                     int fill = c == '#' ? color : c == 'o' ? accent : ColorUtil.lerp(color, 0xFF000000, 0.35f);
-                    ctx.fill(px, py, px + scale, py + scale, fill);
+                    ctx.fill(x + col * scale, py, x + end * scale, py + scale, fill);
+                    col = end;
+                } else {
+                    col++;
                 }
             }
         }
@@ -337,13 +344,17 @@ public final class PixelIcons {
     private static void draw(GuiGraphicsExtractor ctx, String[] rows, int x, int y, int color, int alt) {
         for (int row = 0; row < rows.length; row++) {
             String line = rows[row];
-            for (int col = 0; col < line.length(); col++) {
+            int col = 0;
+            while (col < line.length()) {
                 char c = line.charAt(col);
-                if (c == '#') {
-                    ctx.fill(x + col, y + row, x + col + 1, y + row + 1, color);
-                } else if (c == 'o') {
-                    ctx.fill(x + col, y + row, x + col + 1, y + row + 1, alt);
+                int end = col + 1;
+                while (end < line.length() && line.charAt(end) == c) {
+                    end++;
                 }
+                if (c == '#' || c == 'o') {
+                    ctx.fill(x + col, y + row, x + end, y + row + 1, c == '#' ? color : alt);
+                }
+                col = end;
             }
         }
     }

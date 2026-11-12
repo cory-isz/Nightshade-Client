@@ -96,11 +96,11 @@ public final class NightshadeOptionsScreen extends NsMenuScreen {
     }
 
     private void layout() {
-        int w = Math.min(width - 24, 460);
-        int h = Math.min(height - 24, 300);
+        int w = Math.min(width - 32, 600);
+        int h = height - 4;
         px1 = (width - w) / 2;
         px2 = px1 + w;
-        py1 = (height - h) / 2;
+        py1 = 2;
         py2 = py1 + h;
         if (fov != null) {
             int fovW = difficultyButton != null ? (px2 - px1 - 38) / 2 : px2 - px1 - 32;
@@ -120,10 +120,7 @@ public final class NightshadeOptionsScreen extends NsMenuScreen {
         layout();
         float a = Fx.easeOutCubic(((System.nanoTime() - openedAt) / 1e9f) / 0.35f);
         tiles.beginFrame();
-        Fx.shadow(ctx, px1, py1 + 3, px2, py2 + 3, 12, 0xA0000000);
-        RenderUtil.roundedRect(ctx, px1, py1, px2, py2, 8, ColorUtil.withAlpha(Theme.BACKGROUND, 0xC8));
-        ctx.fill(px1 + 8, py1 + 1, px2 - 8, py1 + 2, 0x18FFFFFF);
-        RenderUtil.roundedOutline(ctx, px1, py1, px2, py2, 8, ColorUtil.withAlpha(Theme.accent(), 0x70));
+        renderPage(ctx, px1, px2);
         RenderUtil.roundedRect(ctx, px1 + 12, py1 + 9, px1 + 34, py1 + 31, 5, ColorUtil.withAlpha(Theme.accent(), 0x60));
         PixelIcons.menu(ctx, PixelIcons.MENU_OPTIONS, px1 + 14, py1 + 11, 2, 0xFFE9E4FF, Theme.accentLight());
         Fonts.draw(ctx, "Options", px1 + 42, py1 + 11, Theme.TEXT, false);
@@ -135,7 +132,7 @@ public final class NightshadeOptionsScreen extends NsMenuScreen {
         int gw = (px2 - px1 - 32 - gap * (cols - 1)) / cols;
         int top = py1 + 68;
         int rows = (grid.size() + cols - 1) / cols;
-        int th = Math.max(30, Math.min(44, (py2 - 34 - top - gap * (rows - 1)) / rows));
+        int th = Math.max(30, Math.min(62, (py2 - 40 - top - gap * (rows - 1)) / rows));
         for (int i = 0; i < grid.size(); i++) {
             int r = i / cols;
             int c = i % cols;

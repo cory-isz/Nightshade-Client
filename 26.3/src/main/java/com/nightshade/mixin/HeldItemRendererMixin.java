@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(FirstPersonHandsAndItemsRenderer.class)
@@ -42,5 +43,11 @@ public abstract class HeldItemRendererMixin {
             matrices.popPose();
             nightshade$pushed = false;
         }
+    }
+
+    /** Old Animations: keep the hand up (equip progress 0) instead of dipping while the attack cooldown recharges. */
+    @ModifyVariable(method = "submitArmWithItem", at = @At("HEAD"), argsOnly = true, ordinal = 3)
+    private float nightshade$equipProgress(float equipProgress) {
+        return com.nightshade.module.visual.OldAnimations.equipProgress(equipProgress);
     }
 }

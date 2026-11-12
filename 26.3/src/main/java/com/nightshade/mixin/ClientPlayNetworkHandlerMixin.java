@@ -37,5 +37,8 @@ public abstract class ClientPlayNetworkHandlerMixin {
             com.nightshade.util.EffectProbe.hit("(confirmed hit)");
             NightshadeClient.client().events().post(new HitLandedEvent(living));
         }
+        if (entity == mc.player) {
+            NightshadeClient.client().events().post(new com.nightshade.event.events.HurtByEvent(packet.getSource(mc.level).getEntity()));
+        }
     }
 }

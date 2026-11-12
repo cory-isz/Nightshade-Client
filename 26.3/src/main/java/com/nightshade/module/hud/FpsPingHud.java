@@ -24,6 +24,13 @@ public final class FpsPingHud extends HudModule {
             "Labeled", "Suffix", "Compact"));
     private final BooleanSetting colorQuality = add(new BooleanSetting("Color By Quality", "Colour values green/yellow/red by quality", true));
     private final ColorSetting labelColor = add(new ColorSetting("Label Color", "Colour of labels", 0xFFB794FF));
+    private final BooleanSetting frameGraph = add(new BooleanSetting("Frame Graph", "Graph of recent frame times, so you can see stutters", false));
+
+    private static final int GRAPH_SAMPLES = 90;
+    private static final int GRAPH_H = 16;
+    private final float[] frameMs = new float[GRAPH_SAMPLES];
+    private int frameIndex;
+    private long lastFrameNanos;
 
     private int fps = -1;
     private int ping = Integer.MIN_VALUE;
@@ -117,12 +124,40 @@ public final class FpsPingHud extends HudModule {
 
     @Override
     public int getWidth() {
-        return width;
+        return frameGraph.get() ? Math.max(width, GRAPH_SAMPLES + 8) : width;
     }
 
     @Override
     public int getHeight() {
-        return Fonts.height() + 6;
+        return Fonts.height() + 6 + (frameGraph.get() ? GRAPH_H + 12 : 0);
+    }
+
+    /** Records this frame's time (the HUD is drawn once per frame) and draws the last {@value #GRAPH_SAMPLES} frames. */
+    private void renderGraph(GuiGraphicsExtractor context, int top) {
+        long now = System.nanoTime();
+        if (lastFrameNanos != 0) {
+            frameMs[frameIndex] = (now - lastFrameNanos) / 1_000_000f;
+            frameIndex = (frameIndex + 1) % GRAPH_SAMPLES;
+        }
+        lastFrameNanos = now;
+        int x0 = (getWidth() - GRAPH_SAMPLES) / 2;
+        context.fill(x0, top, x0 + GRAPH_SAMPLES, top + GRAPH_H, 0x30000000);
+        // reference line at 60 fps (16.7 ms), graph scale 0-50 ms
+        int ref = top + GRAPH_H - Math.round(GRAPH_H * 16.7f / 50f);
+        context.fill(x0, ref, x0 + GRAPH_SAMPLES, ref + 1, 0x30FFFFFF);
+        float worst = 0f;
+        for (int i = 0; i < GRAPH_SAMPLES; i++) {
+            float ms = frameMs[(frameIndex + i) % GRAPH_SAMPLES];
+            worst = Math.max(worst, ms);
+            if (ms <= 0f) {
+                continue;
+            }
+            int h = Math.max(1, Math.min(GRAPH_H, Math.round(GRAPH_H * ms / 50f)));
+            int c = ms <= 16.7f ? 0xC05BE49B : ms <= 33.4f ? 0xC0FFC857 : 0xD0FF5C7A;
+            context.fill(x0 + i, top + GRAPH_H - h, x0 + i + 1, top + GRAPH_H, c);
+        }
+        String label = String.format(java.util.Locale.ROOT, "worst %.0f ms", worst);
+        Fonts.draw(context, label, x0, top + GRAPH_H + 2, Theme.TEXT_DIM, shadow());
     }
 
     @Override
@@ -151,6 +186,9 @@ public final class FpsPingHud extends HudModule {
         if (showPing.get()) {
             x = Fonts.draw(context, pingLabel, x, y, labelColor.argb(), shadow) - (pingLabel.isEmpty() ? 0 : 1);
             Fonts.draw(context, pingValue, x, y, pingColor, shadow);
+        }
+        if (frameGraph.get()) {
+            renderGraph(context, Fonts.height() + 6);
         }
     }
 }

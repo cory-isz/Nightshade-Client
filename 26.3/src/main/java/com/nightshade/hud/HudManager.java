@@ -14,6 +14,10 @@ public final class HudManager {
         this.client = client;
     }
 
+    /** Per-component render time, collected only while the benchmark turns profiling on. */
+    public static boolean PROFILE;
+    public static final java.util.Map<String, Long> TIMES = new java.util.HashMap<>();
+
     public void render(GuiGraphicsExtractor context, float tickDelta) {
         // The HUD editor draws components itself (with selection outlines); avoid drawing them twice.
         if (mc.gui.screen() instanceof HudEditorScreen) {
@@ -25,9 +29,17 @@ public final class HudManager {
                 visible.add(module);
             }
         }
+        long t0 = PROFILE ? System.nanoTime() : 0L;
         HudLayout.apply(visible, context.guiWidth(), context.guiHeight());
+        if (PROFILE) {
+            TIMES.merge("(layout)", System.nanoTime() - t0, Long::sum);
+        }
         for (HudModule module : visible) {
+            long t = PROFILE ? System.nanoTime() : 0L;
             renderSafely(module, context, tickDelta, false);
+            if (PROFILE) {
+                TIMES.merge(module.getName(), System.nanoTime() - t, Long::sum);
+            }
         }
     }
 

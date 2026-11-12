@@ -40,18 +40,13 @@ public final class CosmeticsScreen extends NsMenuScreen {
 
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        int w = Math.min(width - 24, 520);
-        int h = Math.min(height - 24, 300);
+        int w = Math.min(width - 32, 620);
+        int h = height - 4;
         px1 = (width - w) / 2;
         px2 = px1 + w;
-        py1 = (height - h) / 2;
+        py1 = 2;
         py2 = py1 + h;
-        Fx.shadow(ctx, px1, py1 + 3, px2, py2 + 3, 12, 0xA0000000);
-        RenderUtil.roundedRect(ctx, px1, py1, px2, py2, 8, ColorUtil.withAlpha(Theme.BACKGROUND, 0xD0));
-        RenderUtil.roundedOutline(ctx, px1, py1, px2, py2, 8, Theme.BORDER);
-        int mid = (px1 + px2) / 2;
-        RenderUtil.horizontalGradient(ctx, px1 + 8, py1, mid, py1 + 1, 0x00000000, ColorUtil.withAlpha(Theme.accentLight(), 0xB0));
-        RenderUtil.horizontalGradient(ctx, mid, py1, px2 - 8, py1 + 1, ColorUtil.withAlpha(Theme.accentLight(), 0xB0), 0x00000000);
+        renderPage(ctx, px1, px2);
         Fonts.draw(ctx, "Cosmetics", px1 + 14, py1 + 11, Theme.TEXT, false);
         Fonts.draw(ctx, "Capes and elytra skins - client-side, only you see them", px1 + 14, py1 + 22, Theme.TEXT_DIM, false);
 

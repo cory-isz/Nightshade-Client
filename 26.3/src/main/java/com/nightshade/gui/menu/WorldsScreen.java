@@ -93,11 +93,11 @@ public final class WorldsScreen extends NsMenuScreen {
     }
 
     private void layout() {
-        int w = Math.min(width - 24, 460);
-        int h = Math.min(height - 24, 320);
+        int w = Math.min(width - 32, 600);
+        int h = height - 4;
         px1 = (width - w) / 2;
         px2 = px1 + w;
-        py1 = (height - h) / 2;
+        py1 = 2;
         py2 = py1 + h;
         listTop = py1 + 40;
         listBottom = py2 - 32;
@@ -255,10 +255,7 @@ public final class WorldsScreen extends NsMenuScreen {
         ctx.pose().pushMatrix();
         ctx.pose().translate(0, lift);
         int accent = MenuBackground.accent();
-        Fx.shadow(ctx, px1, py1 + 3, px2, py2 + 3, 12, 0xA0000000);
-        RenderUtil.roundedRect(ctx, px1, py1, px2, py2, 8, com.nightshade.render.Theme.tint(0xC4100A1E));
-        ctx.fill(px1 + 8, py1 + 1, px2 - 8, py1 + 2, 0x18FFFFFF);
-        RenderUtil.roundedOutline(ctx, px1, py1, px2, py2, 8, ColorUtil.withAlpha(accent, 0x70));
+        renderPage(ctx, px1, px2);
 
         // Header
         RenderUtil.roundedRect(ctx, px1 + 12, py1 + 9, px1 + 34, py1 + 31, 5, ColorUtil.withAlpha(accent, 0x60));

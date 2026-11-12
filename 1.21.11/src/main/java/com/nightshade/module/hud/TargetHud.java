@@ -21,12 +21,19 @@ import net.minecraft.world.entity.player.Player;
 public final class TargetHud extends HudModule {
     private final NumberSetting hideAfter = add(new NumberSetting("Hide After", "Seconds after the last hit before hiding", 5, 1, 30, 1, "s"));
     private final BooleanSetting showDamage = add(new BooleanSetting("Last Hit Damage", "Show how much health your last hit removed", true));
+    private final BooleanSetting showGear = add(new BooleanSetting("Show Gear", "Show what your target is holding and wearing", true));
+    private final BooleanSetting showTrade = add(new BooleanSetting("Hit Trade", "Hits you landed on them : hits they landed on you", true));
 
     private LivingEntity target;
     private long lastHitMillis;
     private float healthBefore = -1f;
     private float lastDamage;
     private final Animation bar = new Animation(10f, 1f);
+    private int hitsGiven;
+    private int hitsTaken;
+    private static final net.minecraft.world.entity.EquipmentSlot[] ARMOR = {
+            net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
+            net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET};
 
     public TargetHud() {
         super("Target HUD", "Shows health and info of the entity you are fighting", ModuleCategory.HUD, 0.5, 0.7);
@@ -34,12 +41,30 @@ public final class TargetHud extends HudModule {
             if (event.target() instanceof LivingEntity living) {
                 if (living != target) {
                     bar.snap(living.getHealth() / Math.max(1f, living.getMaxHealth()));
+                    hitsGiven = 0;
+                    hitsTaken = 0;
                 }
                 target = living;
                 healthBefore = living.getHealth();
                 lastHitMillis = System.currentTimeMillis();
             }
         });
+        listen(com.nightshade.event.events.HitLandedEvent.class, event -> {
+            if (event.target() == target) {
+                hitsGiven++;
+            }
+        });
+        listen(com.nightshade.event.events.HurtByEvent.class, event -> {
+            if (event.attacker() != null && event.attacker() == target) {
+                hitsTaken++;
+                lastHitMillis = System.currentTimeMillis(); // keep showing while they are hitting you
+            }
+        });
+    }
+
+    /** Test hooks. */
+    public int hitsGivenForTest() {
+        return hitsGiven;
     }
 
     @Override
@@ -50,12 +75,12 @@ public final class TargetHud extends HudModule {
 
     @Override
     public int getWidth() {
-        return 130;
+        return 150;
     }
 
     @Override
     public int getHeight() {
-        return 36;
+        return showGear.get() ? 52 : 36;
     }
 
     @Override
@@ -83,7 +108,13 @@ public final class TargetHud extends HudModule {
                 textX = 36;
             }
         }
-        Fonts.draw(context, Fonts.trim(target.getName().getString(), w - textX - 6), textX, 5, textColor.argb(), shadow());
+        String trade = showTrade.get() && hitsGiven + hitsTaken > 0 ? hitsGiven + " : " + hitsTaken : "";
+        int tradeW = trade.isEmpty() ? 0 : Fonts.width(trade) + 6;
+        Fonts.draw(context, Fonts.trim(target.getName().getString(), w - textX - 6 - tradeW), textX, 5, textColor.argb(), shadow());
+        if (!trade.isEmpty()) {
+            int tc = hitsGiven > hitsTaken ? Theme.SUCCESS : hitsGiven < hitsTaken ? Theme.DANGER : Theme.TEXT_MUTED;
+            Fonts.draw(context, trade, w - 6 - Fonts.width(trade), 5, tc, shadow());
+        }
         String info = String.format(Locale.ROOT, "%.1f hp  |  %.1fm", health, mc.player == null ? 0.0 : mc.player.distanceTo(target));
         if (showDamage.get() && lastDamage > 0f) {
             info += String.format(Locale.ROOT, "  |  -%.1f", lastDamage);
@@ -91,10 +122,31 @@ public final class TargetHud extends HudModule {
         Fonts.draw(context, Fonts.trim(info, w - textX - 6), textX, 15, Theme.TEXT_MUTED, shadow());
         float fraction = bar.setTarget(Math.max(0f, Math.min(1f, health / max))).update();
         int barX2 = w - 6;
-        RenderUtil.roundedRect(context, textX, h - 9, barX2, h - 5, 2, 0x70000000);
+        RenderUtil.roundedRect(context, textX, 27, barX2, 31, 2, 0x70000000);
         int color = ColorUtil.lerp(Theme.DANGER, Theme.SUCCESS, fraction);
         int fill = textX + Math.max(2, Math.round((barX2 - textX) * fraction));
-        RenderUtil.roundedRect(context, textX, h - 9, fill, h - 5, 2, color);
-        RenderUtil.horizontalGradient(context, textX + 1, h - 9, fill - 1, h - 8, 0x00FFFFFF, 0x50FFFFFF); // sheen
+        RenderUtil.roundedRect(context, textX, 27, fill, 31, 2, color);
+        RenderUtil.horizontalGradient(context, textX + 1, 27, fill - 1, 28, 0x00FFFFFF, 0x50FFFFFF); // sheen
+        if (showGear.get()) {
+            // held item, then armour, at 3/4 size
+            int gx = textX;
+            context.pose().pushMatrix();
+            context.pose().translate(gx, 35);
+            context.pose().scale(0.75f, 0.75f);
+            int ix = 0;
+            net.minecraft.world.item.ItemStack held = target.getMainHandItem();
+            if (!held.isEmpty()) {
+                context.renderItem(held, ix, 0);
+                ix += 22;
+            }
+            for (net.minecraft.world.entity.EquipmentSlot slot : ARMOR) {
+                net.minecraft.world.item.ItemStack piece = target.getItemBySlot(slot);
+                if (!piece.isEmpty()) {
+                    context.renderItem(piece, ix, 0);
+                    ix += 17;
+                }
+            }
+            context.pose().popMatrix();
+        }
     }
 }

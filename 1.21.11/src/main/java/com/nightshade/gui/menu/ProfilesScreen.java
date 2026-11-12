@@ -68,10 +68,10 @@ public final class ProfilesScreen extends com.nightshade.gui.menu.NsMenuScreen {
     }
 
     private void layout() {
-        panelW = Math.min(width - 24, 380);
-        panelH = Math.min(height - 24, 300);
+        panelW = Math.min(width - 32, 560);
+        panelH = height - 4;
         panelX = (width - panelW) / 2;
-        panelY = (height - panelH) / 2;
+        panelY = 2;
         listTop = panelY + 52;
         listBottom = panelY + panelH - 64;
         if (nameField != null) {
@@ -130,8 +130,7 @@ public final class ProfilesScreen extends com.nightshade.gui.menu.NsMenuScreen {
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         layout();
         // (the background is drawn by Screen.renderWithTooltipAndSubtitles before render(); drawing it here again doubled it)
-        RenderUtil.roundedRect(ctx, panelX, panelY, panelX + panelW, panelY + panelH, 8, Theme.BACKGROUND);
-        RenderUtil.roundedOutline(ctx, panelX, panelY, panelX + panelW, panelY + panelH, 8, Theme.BORDER);
+        renderPage(ctx, panelX, panelX + panelW);
         RenderUtil.horizontalGradient(ctx, panelX + 10, panelY, panelX + panelW / 2, panelY + 1, 0x00000000, Theme.accent());
         RenderUtil.horizontalGradient(ctx, panelX + panelW / 2, panelY, panelX + panelW - 10, panelY + 1, Theme.accent(), 0x00000000);
         Fonts.draw(ctx, "Profiles", panelX + 16, panelY + 12, Theme.TEXT, false);

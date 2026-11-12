@@ -138,12 +138,12 @@ public final class KeystrokesHud extends HudModule {
         if (background.get() && !"Classic".equals(style) && !"Minimal".equals(style)) {
             // Glass key; pressing fills it with the pressed colour and lifts it slightly.
             int lift = Math.round(progress);
-            RenderUtil.roundedRect(context, x, y + 1, x + w, y + h + 1, rounded.get() ? 4 : 0, 0x38000000);
+            com.nightshade.render.PanelCache.shape(context, x, y + 1, x + w, y + h + 1, rounded.get() ? 4 : 0, 0x38000000, false);
             int body = ColorUtil.lerp(ColorUtil.withAlpha(backgroundColor.argb(), Math.min(255, ColorUtil.alpha(backgroundColor.argb()) + 0x18)), pressedColor.argb(), progress);
-            RenderUtil.roundedRect(context, x, y - lift, x + w, y + h - lift, rounded.get() ? 4 : 0, body);
+            com.nightshade.render.PanelCache.shape(context, x, y - lift, x + w, y + h - lift, rounded.get() ? 4 : 0, body, false);
             context.fillGradient(x + 2, y + 1 - lift, x + w - 2, y + h / 2 - lift, 0x12FFFFFF, 0x00FFFFFF);
-            RenderUtil.roundedOutline(context, x, y - lift, x + w, y + h - lift, rounded.get() ? 4 : 0,
-                    ColorUtil.lerp(0x24FFFFFF, ColorUtil.withAlpha(com.nightshade.render.Theme.accentLight(), 0xC0), progress));
+            com.nightshade.render.PanelCache.shape(context, x, y - lift, x + w, y + h - lift, rounded.get() ? 4 : 0,
+                    ColorUtil.lerp(0x24FFFFFF, ColorUtil.withAlpha(com.nightshade.render.Theme.accentLight(), 0xC0), progress), true);
             return;
         }
         int base = background.get() ? backgroundColor.argb() : 0x00000000;

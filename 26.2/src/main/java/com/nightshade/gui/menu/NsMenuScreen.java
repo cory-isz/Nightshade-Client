@@ -45,4 +45,18 @@ public abstract class NsMenuScreen extends NsScreen {
         }
         Fx.vignette(ctx, width, height, com.nightshade.render.Theme.tint(0xC8050210));
     }
+
+    /**
+     * The full-page frame shared by the Nightshade menus: soft header and footer bands across the whole screen and an
+     * accent hairline under the header, instead of a small box in the middle.
+     */
+    protected void renderPage(GuiGraphicsExtractor ctx, int x1, int x2) {
+        int dark = com.nightshade.render.Theme.tint(0xC80A0614);
+        ctx.fillGradient(0, 0, width, 46, dark, 0x000A0614);
+        ctx.fillGradient(0, height - 42, width, height, 0x000A0614, com.nightshade.render.Theme.tint(0xD80A0614));
+        int line = com.nightshade.render.ColorUtil.withAlpha(com.nightshade.render.Theme.accentLight(), 0x70);
+        int mid = (x1 + x2) / 2;
+        com.nightshade.render.RenderUtil.horizontalGradient(ctx, x1, 37, mid, 38, 0x00000000, line);
+        com.nightshade.render.RenderUtil.horizontalGradient(ctx, mid, 37, x2, 38, line, 0x00000000);
+    }
 }

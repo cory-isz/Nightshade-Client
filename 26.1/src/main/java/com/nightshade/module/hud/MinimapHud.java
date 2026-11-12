@@ -49,6 +49,10 @@ public final class MinimapHud extends HudModule {
     private int[] front = new int[GRID * GRID];
     private int[] back = new int[GRID * GRID];
     private int[] backHeights = new int[GRID * GRID];
+    private int[] frontHeights = new int[GRID * GRID];
+    private int passesSinceFull;
+    private boolean fullPass;
+    private static final int FULL_EVERY = 10; // passes (one pass is 4 ticks): a full resample about every 2 seconds
     private int frontCX, frontCZ, frontStep = 1;
     private int backCX, backCZ, backStep = 1, backRow = -1;
     private boolean haveFront;
@@ -92,29 +96,52 @@ public final class MinimapHud extends HudModule {
         }
         int step = zoom.intValue();
         if (backRow < 0) {
-            backCX = mc.player.getBlockX();
-            backCZ = mc.player.getBlockZ();
+            // Centre snapped to the zoom step, so the new grid lines up with the previous one and can reuse it.
+            backCX = Math.floorDiv(mc.player.getBlockX(), step) * step;
+            backCZ = Math.floorDiv(mc.player.getBlockZ(), step) * step;
             backStep = step;
             backRow = 0;
+            fullPass = !haveFront || frontStep != step || ++passesSinceFull >= FULL_EVERY;
+            if (fullPass) {
+                passesSinceFull = 0;
+            }
         }
         int caveTop = level.dimensionType().hasCeiling() ? mc.player.getBlockY() + 1 : Integer.MIN_VALUE;
         int originX = backCX - GRID / 2 * backStep;
         int originZ = backCZ - GRID / 2 * backStep;
+        int frontOriginX = frontCX - GRID / 2 * frontStep;
+        int frontOriginZ = frontCZ - GRID / 2 * frontStep;
+        boolean reuse = !fullPass;
         int rows = GRID / 4 + 1;
         for (int r = 0; r < rows && backRow < GRID; r++, backRow++) {
             int z = originZ + backRow * backStep;
+            int fz = (z - frontOriginZ) / backStep;
+            boolean rowInFront = reuse && fz >= 0 && fz < GRID;
             for (int gx = 0; gx < GRID; gx++) {
                 int x = originX + gx * backStep;
+                int i = backRow * GRID + gx;
+                if (rowInFront) {
+                    int fx = (x - frontOriginX) / backStep;
+                    if (fx >= 0 && fx < GRID) {
+                        // Already sampled in the previous picture: copy it instead of reading the world again.
+                        back[i] = front[fz * GRID + fx];
+                        backHeights[i] = frontHeights[fz * GRID + fx];
+                        continue;
+                    }
+                }
                 int h = sampler.height(level, x, z, caveTop);
                 int north = backRow > 0 ? backHeights[(backRow - 1) * GRID + gx] : sampler.height(level, x, z - backStep, caveTop);
-                backHeights[backRow * GRID + gx] = h;
-                back[backRow * GRID + gx] = sampler.color(level, x, z, h, north);
+                backHeights[i] = h;
+                back[i] = sampler.color(level, x, z, h, north);
             }
         }
         if (backRow >= GRID) {
             int[] t = front;
             front = back;
             back = t;
+            int[] th = frontHeights;
+            frontHeights = backHeights;
+            backHeights = th;
             frontCX = backCX;
             frontCZ = backCZ;
             frontStep = backStep;

@@ -87,11 +87,11 @@ public final class ReplaysScreen extends NsMenuScreen {
     }
 
     private void layout() {
-        int w = Math.min(width - 24, 460);
-        int h = Math.min(height - 24, 300);
+        int w = Math.min(width - 32, 600);
+        int h = height - 4;
         px1 = (width - w) / 2;
         px2 = px1 + w;
-        py1 = (height - h) / 2;
+        py1 = 2;
         py2 = py1 + h;
         listTop = py1 + 40;
         listBottom = py2 - 32;
@@ -100,9 +100,7 @@ public final class ReplaysScreen extends NsMenuScreen {
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         layout();
-        Fx.shadow(ctx, px1, py1 + 3, px2, py2 + 3, 12, 0xA0000000);
-        RenderUtil.roundedRect(ctx, px1, py1, px2, py2, 8, ColorUtil.withAlpha(Theme.BACKGROUND, 0xD0));
-        RenderUtil.roundedOutline(ctx, px1, py1, px2, py2, 8, Theme.BORDER);
+        renderPage(ctx, px1, px2);
         Fonts.draw(ctx, "Replays", px1 + 14, py1 + 11, Theme.TEXT, false);
         boolean recording = NightshadeClient.client().modules().get(FightReplay.class) != null
                 && NightshadeClient.client().modules().get(FightReplay.class).isEnabled();

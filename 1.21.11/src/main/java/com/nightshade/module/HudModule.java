@@ -118,6 +118,9 @@ public abstract class HudModule extends Module {
         String style = com.nightshade.render.Theme.hudStyle();
         int w = x2 - x1;
         int h = y2 - y1;
+        if (!"Minimal".equals(style) && com.nightshade.render.PanelCache.draw(context, x1, y1, x2, y2, color, style)) {
+            return; // one cached quad instead of ~30 fills
+        }
         switch (style) {
             case "Minimal" -> {
             }
