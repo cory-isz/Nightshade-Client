@@ -6,12 +6,9 @@ import com.nightshade.module.setting.BooleanSetting;
 import com.nightshade.module.setting.NumberSetting;
 import com.nightshade.util.EffectProbe;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
-import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 
 /**
  * Skips drawing entities that are completely hidden behind solid blocks. Visibility is tested with a few rays from
@@ -35,6 +32,7 @@ public final class EntityCulling extends Module {
 
     public EntityCulling() {
         super("Entity Culling", "Skips drawing entities hidden behind walls", ModuleCategory.PERFORMANCE);
+        enabledByDefault(); // invisible by design: only things you cannot see are skipped
     }
 
     @Override
@@ -93,65 +91,7 @@ public final class EntityCulling extends Module {
     }
 
     private boolean isVisible(Level level, Entity entity, double camX, double camY, double camZ) {
-        BlockPos camPos = BlockPos.containing(camX, camY, camZ);
-        if (opaque(level, camPos.getX(), camPos.getY(), camPos.getZ())) {
-            return true; // camera inside a block (e.g. third person clipping): don't guess
-        }
-        AABB box = entity.getBoundingBox().inflate(0.1);
-        double[] xs = {box.minX, (box.minX + box.maxX) / 2, box.maxX};
-        double[] ys = {box.minY, (box.minY + box.maxY) / 2, box.maxY};
-        double[] zs = {box.minZ, (box.minZ + box.maxZ) / 2, box.maxZ};
-        // centre first (most likely visible), then the 8 corners
-        if (rayClear(level, camX, camY, camZ, xs[1], ys[1], zs[1])) {
-            return true;
-        }
-        for (int i = 0; i < 8; i++) {
-            if (rayClear(level, camX, camY, camZ, xs[(i & 1) * 2], ys[((i >> 1) & 1) * 2], zs[((i >> 2) & 1) * 2])) {
-                return true;
-            }
-        }
-        // the top centre too: tall entities peeking over a wall
-        return rayClear(level, camX, camY, camZ, xs[1], ys[2], zs[1]);
-    }
-
-    private static boolean opaque(Level level, int x, int y, int z) {
-        return level.getBlockState(new BlockPos(x, y, z)).isSolidRender();
-    }
-
-    /** Walks the blocks on the line from a to b (Amanatides-Woo) and returns false at the first opaque one. */
-    private boolean rayClear(Level level, double ax, double ay, double az, double bx, double by, double bz) {
-        raysThisTick++;
-        int x = Mth.floor(ax), y = Mth.floor(ay), z = Mth.floor(az);
-        int ex = Mth.floor(bx), ey = Mth.floor(by), ez = Mth.floor(bz);
-        double dx = bx - ax, dy = by - ay, dz = bz - az;
-        int sx = dx > 0 ? 1 : dx < 0 ? -1 : 0;
-        int sy = dy > 0 ? 1 : dy < 0 ? -1 : 0;
-        int sz = dz > 0 ? 1 : dz < 0 ? -1 : 0;
-        double tdx = sx == 0 ? Double.MAX_VALUE : Math.abs(1.0 / dx);
-        double tdy = sy == 0 ? Double.MAX_VALUE : Math.abs(1.0 / dy);
-        double tdz = sz == 0 ? Double.MAX_VALUE : Math.abs(1.0 / dz);
-        double tx = sx == 0 ? Double.MAX_VALUE : (sx > 0 ? (x + 1 - ax) : (ax - x)) * tdx;
-        double ty = sy == 0 ? Double.MAX_VALUE : (sy > 0 ? (y + 1 - ay) : (ay - y)) * tdy;
-        double tz = sz == 0 ? Double.MAX_VALUE : (sz > 0 ? (z + 1 - az) : (az - z)) * tdz;
-        int steps = Math.abs(ex - x) + Math.abs(ey - y) + Math.abs(ez - z);
-        for (int i = 0; i < steps; i++) {
-            if (tx < ty && tx < tz) {
-                x += sx;
-                tx += tdx;
-            } else if (ty < tz) {
-                y += sy;
-                ty += tdy;
-            } else {
-                z += sz;
-                tz += tdz;
-            }
-            if (x == ex && y == ey && z == ez) {
-                return true; // reached the entity's own block
-            }
-            if (opaque(level, x, y, z)) {
-                return false;
-            }
-        }
-        return true;
+        raysThisTick += 10;
+        return com.nightshade.util.Occlusion.isVisible(level, entity.getBoundingBox().inflate(0.1), camX, camY, camZ);
     }
 }

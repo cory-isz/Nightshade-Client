@@ -134,8 +134,117 @@ public final class ModrinthClient {
         return search(query, offset, "[[\"versions:" + gameVersion + "\"],[\"project_type:resourcepack\"]]");
     }
 
+    /** Sort orders Modrinth's search supports, as shown in the browser. */
+    public static final String[] SORTS = {"Popular", "Relevance", "Most followed", "Newest", "Recently updated"};
+    private static final String[] SORT_INDEX = {"downloads", "relevance", "follows", "newest", "updated"};
+
+    /** Fabric mods for this Minecraft version in one Modrinth category (null = any), in the given sort order. */
+    public List<SearchHit> search(String query, int offset, @Nullable String category, int sort) throws IOException, InterruptedException {
+        String facets = "[[\"versions:" + gameVersion + "\"],[\"categories:fabric\"],[\"project_type:mod\"]"
+                + (category == null ? "" : ",[\"categories:" + category + "\"]") + "]";
+        return search(query, offset, facets, SORT_INDEX[Math.floorMod(sort, SORT_INDEX.length)]);
+    }
+
     private List<SearchHit> search(String query, int offset, String facets) throws IOException, InterruptedException {
-        JsonElement root = get("/search?limit=25&offset=" + offset + "&index=" + (query.isBlank() ? "downloads" : "relevance")
+        return search(query, offset, facets, query.isBlank() ? "downloads" : "relevance");
+    }
+
+    /**
+     * Several projects by id or slug in one request, keeping the given order and only those with a Fabric version for
+     * this Minecraft version (used for the Recommended list). Author is left empty: the bulk endpoint does not have it.
+     */
+    public List<SearchHit> projects(List<String> idsOrSlugs) throws IOException, InterruptedException {
+        JsonArray ids = new JsonArray();
+        idsOrSlugs.forEach(ids::add);
+        JsonElement root = get("/projects?ids=" + enc(ids.toString()));
+        List<SearchHit> out = new ArrayList<>();
+        if (root == null || !root.isJsonArray()) {
+            return out;
+        }
+        Map<String, SearchHit> bySlug = new HashMap<>();
+        for (JsonElement element : root.getAsJsonArray()) {
+            JsonObject o = element.getAsJsonObject();
+            if (!contains(o, "game_versions", gameVersion) || !contains(o, "loaders", "fabric")) {
+                continue;
+            }
+            SearchHit hit = new SearchHit(str(o, "id"), str(o, "slug"), str(o, "title"), str(o, "description"), "",
+                    o.has("downloads") ? o.get("downloads").getAsLong() : 0L,
+                    o.has("icon_url") && !o.get("icon_url").isJsonNull() ? o.get("icon_url").getAsString() : null);
+            bySlug.put(hit.slug(), hit);
+            bySlug.put(hit.projectId(), hit);
+        }
+        for (String key : idsOrSlugs) {
+            SearchHit hit = bySlug.get(key);
+            if (hit != null && !out.contains(hit)) {
+                out.add(hit);
+            }
+        }
+        return out;
+    }
+
+    private static boolean contains(JsonObject o, String key, String value) {
+        if (!o.has(key) || !o.get(key).isJsonArray()) {
+            return false;
+        }
+        for (JsonElement e : o.getAsJsonArray(key)) {
+            if (value.equals(e.getAsString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The full Modrinth page of a project, for the details panel. */
+    public record ProjectDetails(String body, List<String> categories, long followers, String license, String updated,
+                                 String clientSide, String serverSide, List<String> dependencyNames) {
+    }
+
+    /** Loads a project's page and the names of the required dependencies its newest compatible version would install. */
+    public ProjectDetails details(String projectId) throws IOException, InterruptedException {
+        JsonElement root = get("/project/" + enc(projectId));
+        if (root == null || !root.isJsonObject()) {
+            throw new IOException("Project not found");
+        }
+        JsonObject o = root.getAsJsonObject();
+        List<String> categories = new ArrayList<>();
+        if (o.has("categories") && o.get("categories").isJsonArray()) {
+            for (JsonElement e : o.getAsJsonArray("categories")) {
+                categories.add(e.getAsString());
+            }
+        }
+        String license = o.has("license") && o.get("license").isJsonObject() ? str(o.getAsJsonObject("license"), "id") : "";
+        String updated = str(o, "updated");
+        List<String> dependencyNames = new ArrayList<>();
+        Version version = latestVersion(projectId);
+        if (version != null && !version.requiredProjects().isEmpty()) {
+            net.fabricmc.loader.api.FabricLoader loader = net.fabricmc.loader.api.FabricLoader.getInstance();
+            for (SearchHit dep : projectsAnyVersion(version.requiredProjects())) {
+                if (!loader.isModLoaded(dep.slug()) && !loader.isModLoaded(dep.slug().replace('-', '_'))) {
+                    dependencyNames.add(dep.title()); // only what would really be downloaded
+                }
+            }
+        }
+        return new ProjectDetails(str(o, "body"), categories, o.has("followers") ? o.get("followers").getAsLong() : 0L,
+                license, updated.length() >= 10 ? updated.substring(0, 10) : updated, str(o, "client_side"), str(o, "server_side"), dependencyNames);
+    }
+
+    /** Like {@link #projects} but without the version filter (dependency names). */
+    private List<SearchHit> projectsAnyVersion(List<String> ids) throws IOException, InterruptedException {
+        JsonArray array = new JsonArray();
+        ids.forEach(array::add);
+        JsonElement root = get("/projects?ids=" + enc(array.toString()));
+        List<SearchHit> out = new ArrayList<>();
+        if (root != null && root.isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray()) {
+                JsonObject o = element.getAsJsonObject();
+                out.add(new SearchHit(str(o, "id"), str(o, "slug"), str(o, "title"), "", "", 0L, null));
+            }
+        }
+        return out;
+    }
+
+    private List<SearchHit> search(String query, int offset, String facets, String index) throws IOException, InterruptedException {
+        JsonElement root = get("/search?limit=25&offset=" + offset + "&index=" + index
                 + "&query=" + enc(query) + "&facets=" + enc(facets));
         List<SearchHit> hits = new ArrayList<>();
         if (root == null) {

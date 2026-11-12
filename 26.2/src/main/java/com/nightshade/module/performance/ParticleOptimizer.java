@@ -22,6 +22,8 @@ public final class ParticleOptimizer extends Module {
     private final NumberSetting keepPercent = add(new NumberSetting("Keep", "Percentage of particles kept in Reduce mode", 40, 5, 95, 5, "%"))
             .visibleWhen(() -> mode.is("Reduce"));
     private final BooleanSetting keepBlockBreak = add(new BooleanSetting("Keep Block Breaking", "Always keep block-breaking particles for feedback", true));
+    private final NumberSetting maxDistance = add(new NumberSetting("Max Distance", "Particles further away than this are not spawned", 24, 8, 32, 2, " blocks"));
+    private final BooleanSetting behind = add(new BooleanSetting("Skip Behind You", "Don't spawn particles behind you (more than 4 blocks back, in first person)", true));
     private int counter;
 
     public ParticleOptimizer() {
@@ -48,7 +50,9 @@ public final class ParticleOptimizer extends Module {
             return false;
         }
         boolean skip;
-        if (module.mode.is("Disable")) {
+        if (module.outOfSight(particle)) {
+            skip = true;
+        } else if (module.mode.is("Disable")) {
             skip = true;
         } else {
             // Deterministic thinning: keep N of every 20 particles, spreading kept ones evenly.
@@ -61,6 +65,26 @@ public final class ParticleOptimizer extends Module {
             SKIPPED.incrementAndGet();
         }
         return skip;
+    }
+
+    /** Too far away, or behind the player where it will never be seen. */
+    private boolean outOfSight(Particle particle) {
+        if (mc.gameRenderer == null || mc.player == null) {
+            return false;
+        }
+        net.minecraft.world.phys.Vec3 at = particle.getBoundingBox().getCenter();
+        net.minecraft.world.phys.Vec3 eye = mc.player.getEyePosition();
+        double dx = at.x - eye.x, dy = at.y - eye.y, dz = at.z - eye.z;
+        double distSq = dx * dx + dy * dy + dz * dz;
+        double max = maxDistance.get();
+        if (distSq > max * max) {
+            return true;
+        }
+        if (behind.get() && distSq > 16 && mc.options.getCameraType().isFirstPerson()) {
+            net.minecraft.world.phys.Vec3 look = mc.player.getViewVector(1f);
+            return dx * look.x + dy * look.y + dz * look.z < -4.0; // more than 4 blocks behind the eye
+        }
+        return false;
     }
 
     /** Total particles skipped since launch (displayed by Frame Stats for measurement). */

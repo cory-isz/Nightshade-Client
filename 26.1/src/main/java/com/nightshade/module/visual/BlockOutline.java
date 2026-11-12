@@ -24,6 +24,7 @@ public final class BlockOutline extends Module {
     private final ColorSetting color = add(new ColorSetting("Color", "Outline colour", 0xFFB794FF));
     private final NumberSetting width = add(new NumberSetting("Width", "Outline thickness", 2.5, 1, 8, 0.5));
     private final ModeSetting shape = add(new ModeSetting("Shape", "Which block shape to outline", "Outline", "Outline", "Full Block"));
+    private final BooleanSetting wholeObject = add(new BooleanSetting("Whole Object", "Outline double chests, beds, doors and tall plants as one object", true));
     private final BooleanSetting throughWalls = add(new BooleanSetting("Through Walls", "Keep the outline visible behind other blocks", false));
 
     public BlockOutline() {
@@ -42,6 +43,9 @@ public final class BlockOutline extends Module {
             return;
         }
         VoxelShape voxel = shape.is("Full Block") ? net.minecraft.world.phys.shapes.Shapes.block() : outline.shape();
+        if (wholeObject.get()) {
+            voxel = com.nightshade.render.MultiBlockShapes.whole(mc.level, outline.pos(), voxel, shape.is("Full Block"));
+        }
         if (voxel == null || voxel.isEmpty()) {
             return;
         }
