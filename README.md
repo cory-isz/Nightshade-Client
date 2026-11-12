@@ -17,6 +17,8 @@
 - **Fight Replay**: keeps the last 30 seconds of the players around you; save a clip with one key and rewatch it.
 - **Performance**: Entity Culling, Shadow Culling, Name Tag Culling, Entity Render Limiter, Block Entity Culling, Particle Optimizer, Dynamic FPS and more.
 - **Quality of life**: Zoom, Freelook, Snaplook, Toggle Sprint, Waypoints, chat tools, screenshot manager, per-server profiles, Nick Hider, an in-game mod menu and an account switcher.
+- **Minimap and World Map**: a minimap with players, mobs and waypoints, and a full-screen world map (M) where you can drop waypoints.
+- **Spotify and Discord**: a Spotify HUD with album art and media keys (no login), and Discord Rich Presence.
 - **Mod browser**: install mods and resource packs from Modrinth in game, with a curated Recommended list, categories, full mod pages, automatic dependencies and a warning when a mod duplicates a built-in feature.
 - **Cosmetics**: capes and elytra skins that are fully client-side; only you see them.
 - **Fonts**: Inter, Poppins or the Minecraft font, optionally applied to the whole game.
@@ -48,7 +50,7 @@ cd 26.3
 ./gradlew jar
 ```
 
-The jar is written to `build/libs/`, for example `Nightshade-Client1.22.0-1.21.11.jar`. On Windows use `gradlew.bat` instead of `./gradlew`.
+The jar is written to `build/libs/`, for example `Nightshade-Client1.23.0-1.21.11.jar`. On Windows use `gradlew.bat` instead of `./gradlew`.
 
 ## Installing
 

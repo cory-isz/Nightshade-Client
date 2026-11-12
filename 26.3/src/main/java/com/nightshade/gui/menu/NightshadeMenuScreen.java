@@ -155,7 +155,11 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
 
     @Override
     public void removed() {
-        icons.values().forEach(net.minecraft.client.gui.screens.FaviconTexture::close);
+        icons.values().forEach(icon -> {
+            if (!icon.isClosed()) {
+                icon.close(); // 26.3 throws when an icon is closed twice
+            }
+        });
         icons.clear();
         super.removed();
     }

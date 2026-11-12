@@ -67,6 +67,13 @@ public final class ModuleRegistry {
         manager.register(new FpsPingHud());
         manager.register(new ArmorStatusHud());
         manager.register(new CpsHud());
+        manager.register(new com.nightshade.module.hud.MinimapHud());
+        manager.register(new com.nightshade.module.utility.WorldMap());
+        manager.register(new com.nightshade.module.utility.DiscordPresence());
+        manager.register(new com.nightshade.module.hud.SpotifyHud());
+        manager.register(new com.nightshade.module.utility.MediaKeys.PlayPause());
+        manager.register(new com.nightshade.module.utility.MediaKeys.Next());
+        manager.register(new com.nightshade.module.utility.MediaKeys.Previous());
         manager.register(new CoordinatesHud());
         manager.register(new ModuleListHud());
         manager.register(new PotionEffectsHud());

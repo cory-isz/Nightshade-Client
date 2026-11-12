@@ -217,7 +217,7 @@ public final class ServersScreen extends NsMenuScreen {
                 servers.remove(data);
                 servers.save();
                 FaviconTexture icon = icons.remove(data);
-                if (icon != null) {
+                if (icon != null && !icon.isClosed()) {
                     icon.close();
                 }
                 selected = Math.min(selected, servers.size() - 1);
@@ -235,7 +235,11 @@ public final class ServersScreen extends NsMenuScreen {
     @Override
     public void removed() {
         pinger.removeAll();
-        icons.values().forEach(FaviconTexture::close);
+        icons.values().forEach(icon -> {
+            if (!icon.isClosed()) {
+                icon.close(); // 26.3 throws when an icon is closed twice
+            }
+        });
         icons.clear();
         iconBytes.clear();
         super.removed();

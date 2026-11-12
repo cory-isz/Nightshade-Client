@@ -16,6 +16,13 @@ public abstract class ChatHudMixin {
     private Component nightshade$timestamp(Component message) {
         com.nightshade.module.pvp.AutoGG.onChat(message);
         // Stack repeats on the raw message first, then add the timestamp.
-        return ChatTimestamps.decorate(ChatTools.stack((ChatComponent) (Object) this, com.nightshade.module.utility.NickHider.chat(message)));
+        return ChatTimestamps.decorate(ChatTools.mention(ChatTools.stack((ChatComponent) (Object) this, com.nightshade.module.utility.NickHider.chat(message))));
+    }
+
+    /** Targets: addMessageToDisplayQueue / addMessageToQueue - vanilla keeps 100 messages; Chat Tools can keep more. */
+    @org.spongepowered.asm.mixin.injection.ModifyConstant(method = {"addMessageToDisplayQueue", "addMessageToQueue"},
+            constant = @org.spongepowered.asm.mixin.injection.Constant(intValue = 100))
+    private int nightshade$history(int original) {
+        return Math.max(original, ChatTools.historyLimit());
     }
 }

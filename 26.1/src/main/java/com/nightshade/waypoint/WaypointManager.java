@@ -117,6 +117,20 @@ public final class WaypointManager {
         return waypoint;
     }
 
+    /** Adds a waypoint at a position in the current dimension (from the world map). Returns it, or null when not in a world. */
+    @Nullable
+    public Waypoint addAt(String name, int x, int y, int z) {
+        if (currentWorldKey() == null) {
+            return null;
+        }
+        List<Waypoint> list = current();
+        String finalName = name == null || name.isBlank() ? "Waypoint " + (list.size() + 1) : name.trim();
+        Waypoint waypoint = new Waypoint(finalName, x, y, z, currentDimension(), PALETTE[list.size() % PALETTE.length]);
+        list.add(waypoint);
+        save();
+        return waypoint;
+    }
+
     public void remove(Waypoint waypoint) {
         current().remove(waypoint);
         save();

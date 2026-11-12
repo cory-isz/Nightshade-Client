@@ -37,6 +37,12 @@ public final class NickHider extends Module {
         active = null;
     }
 
+    /** The nickname while Nick Hider is on, otherwise null. */
+    public static String nickname() {
+        NickHider m = active;
+        return m == null ? null : m.nick.get();
+    }
+
     private static String realName() {
         Minecraft mc = Minecraft.getInstance();
         return mc.getUser() == null ? null : mc.getUser().getName();

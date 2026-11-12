@@ -57,6 +57,10 @@ public final class EntityCulling extends Module {
         if (module == null || mc.level == null || entity == mc.getCameraEntity() || entity == mc.player) {
             return false;
         }
+        // Name tags show through walls in vanilla (holograms, named mobs): never hide an entity whose name is shown.
+        if (entity.hasCustomName() && entity.isCustomNameVisible()) {
+            return false;
+        }
         if (entity instanceof Player && !module.players.get() || entity.isCurrentlyGlowing() || entity.hasPassenger(mc.player)
                 || mc.player != null && (mc.player.isSpectator() || entity.getVehicle() == mc.player)) {
             return false;

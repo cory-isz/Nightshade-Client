@@ -215,7 +215,11 @@ public final class WorldsScreen extends NsMenuScreen {
 
     @Override
     public void removed() {
-        icons.values().forEach(FaviconTexture::close);
+        icons.values().forEach(icon -> {
+            if (!icon.isClosed()) {
+                icon.close(); // 26.3 throws when an icon is closed twice
+            }
+        });
         icons.clear();
         super.removed();
     }
