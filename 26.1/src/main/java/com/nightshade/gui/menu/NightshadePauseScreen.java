@@ -260,11 +260,10 @@ public final class NightshadePauseScreen extends NsMenuScreen {
         return hover.computeIfAbsent(id, k -> new Animation(16f, 0f)).setTarget(hovered ? 1f : 0f).update();
     }
 
+    /** Letter-spaced capitals: each letter placed from the width of the whole text before it, so the gaps stay even. */
     private static void drawSpaced(GuiGraphicsExtractor ctx, String s, int x, int y, int color) {
         for (int i = 0; i < s.length(); i++) {
-            String ch = String.valueOf(s.charAt(i));
-            Fonts.draw(ctx, ch, x, y, color, false);
-            x += Fonts.width(ch) + 1;
+            Fonts.draw(ctx, String.valueOf(s.charAt(i)), x + Fonts.width(s.substring(0, i)) + i * 2, y, color, false);
         }
     }
 

@@ -19,7 +19,7 @@ public final class ClickGuiModule extends Module {
     private final ColorSetting accent = add(new ColorSetting("Accent Color", "Accent colour used by the Custom theme", 0xFF7C6CFF))
             .onChange(this::applyTheme);
     private final NumberSetting guiScale = add(new NumberSetting("GUI Scale", "Size of the client GUI, independent of Minecraft's GUI scale", 1.0, 0.6, 1.5, 0.05, "x"));
-    private final ModeSetting font = add(new ModeSetting("Font", "Typeface for the client GUI and HUD: Minecraft (pixel), Inter or Poppins (clean modern sans, like OneConfig/OneClient), Rounded (Rubik)", "Inter", Fonts.CHOICES))
+    private final ModeSetting font = add(new ModeSetting("Font", "Typeface for the client GUI and HUD: Minecraft (pixel), Inter or Poppins (clean modern sans, like OneConfig/OneClient), Rounded (Rubik)", "Poppins", Fonts.CHOICES))
             .onChange(this::applyTheme);
     private final BooleanSetting universalFont = add(new BooleanSetting("Universal Font", "Use the client font for all of Minecraft: chat, menus, tooltips, signs and name tags", true))
             .onChange(this::applyTheme);

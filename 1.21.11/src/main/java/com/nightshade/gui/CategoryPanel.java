@@ -134,7 +134,7 @@ public final class CategoryPanel {
         bar = true;
         this.x = x;
         this.y = y;
-        BrandLogo.draw(ctx, x + 9, y + 6, 14);
+        BrandLogo.drawMark(ctx, x + 9, y + 5, 16, Theme.accentLight());
         int brandEnd = x + 28;
         String brand = "NIGHTSHADE";
         int brandW = 0;

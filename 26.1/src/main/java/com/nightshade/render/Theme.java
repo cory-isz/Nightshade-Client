@@ -46,7 +46,7 @@ public final class Theme {
     private static volatile int accent = 0xFF7C6CFF;
     private static volatile int accentLight = 0xFFB794FF;
     /** "Minecraft" (vanilla font) or "Rounded" (Rubik). */
-    private static volatile String font = "Inter";
+    private static volatile String font = "Poppins";
     private static volatile float animationSpeed = 1.0f;
 
     private Theme() {

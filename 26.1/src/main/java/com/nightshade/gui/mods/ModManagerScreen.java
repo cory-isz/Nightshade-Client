@@ -66,6 +66,12 @@ public final class ModManagerScreen extends com.nightshade.gui.menu.NsMenuScreen
     private final NsButton toggle = new NsButton("Disable", NsButton.Style.SECONDARY, this::toggleSelected);
     private final NsButton delete = new NsButton("Delete", NsButton.Style.DANGER, this::deleteSelected);
     private final NsButton browse = new NsButton(Lang.t("mods.browse"), NsButton.Style.PRIMARY, () -> minecraft.setScreen(new ModrinthScreen(this)));
+    private int updatesDownloaded;
+    private final NsButton restartNow = new NsButton("Restart now", NsButton.Style.PRIMARY, () -> {
+        if (!com.nightshade.util.GameRestart.restart()) {
+            NightshadeClient.client().notifications().error("Restart", "Couldn't restart automatically - please close and reopen Minecraft");
+        }
+    });
     private final NsButton checkUpdates = new NsButton("Check updates", NsButton.Style.SECONDARY, this::checkUpdates);
     private final NsButton update = new NsButton("Update", NsButton.Style.PRIMARY, this::updateSelected);
     private final com.nightshade.mods.ModrinthClient modrinth = new com.nightshade.mods.ModrinthClient();
@@ -302,6 +308,7 @@ public final class ModManagerScreen extends com.nightshade.gui.menu.NsMenuScreen
                 }
             }
             updates.remove(jar);
+            updatesDownloaded++;
             NightshadeClient.client().notifications().success("Updates", "Downloaded " + version.file().filename() + " - restart to apply");
             refresh();
         }));
@@ -341,13 +348,16 @@ public final class ModManagerScreen extends com.nightshade.gui.menu.NsMenuScreen
         int loaded = (int) all.stream().filter(e -> e.loaded() && !e.library()).count();
         Fonts.draw(ctx, Lang.t("mods.title"), winX + 14, winY + 12, Theme.TEXT, false);
         Fonts.draw(ctx, Lang.t("mods.loaded", loaded), winX + 14 + Fonts.width(Lang.t("mods.title")) + 8, winY + 12, Theme.TEXT_DIM, false);
-        int pending = files.pendingChanges();
+        int pending = files.pendingChanges() + updatesDownloaded;
         if (pending > 0) {
-            String banner = pending + (pending == 1 ? " change applies" : " changes apply") + " after restarting Minecraft";
+            String banner = pending + (pending == 1 ? " change applies" : " changes apply") + " after a restart";
+            int rw = restartNow.preferredWidth();
             int bw = Fonts.width(banner) + 14;
-            int bx = winX + winW - bw - 12;
+            int rx = winX + winW - rw - 12;
+            int bx = rx - 4 - bw;
             RenderUtil.roundedRect(ctx, bx, winY + 9, bx + bw, winY + 22, 4, 0x55FFC857);
             Fonts.draw(ctx, banner, bx + 7, winY + 12, Theme.WARNING, false);
+            restartNow.render(ctx, rx, winY + 8, rw, 15, mouseX, mouseY);
         }
 
         // Search box
@@ -600,6 +610,9 @@ public final class ModManagerScreen extends com.nightshade.gui.menu.NsMenuScreen
 
     @Override
     protected boolean onMouseClicked(double mouseX, double mouseY, int button) {
+        if ((files.pendingChanges() + updatesDownloaded) > 0 && restartNow.click(mouseX, mouseY, button)) {
+            return true;
+        }
         if (done.click(mouseX, mouseY, button) || openFolder.click(mouseX, mouseY, button) || libraries.click(mouseX, mouseY, button)
                 || browse.click(mouseX, mouseY, button) || checkUpdates.click(mouseX, mouseY, button)) {
             return true;

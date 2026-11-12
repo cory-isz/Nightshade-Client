@@ -58,6 +58,11 @@ public final class ModrinthScreen extends com.nightshade.gui.menu.NsMenuScreen {
     private final NsButton page = new NsButton("Open page", NsButton.Style.GHOST, this::openPage);
     private final NsButton back = new NsButton("Back", NsButton.Style.SECONDARY, this::onClose);
     private final NsButton enablePack = new NsButton("Enable", NsButton.Style.SECONDARY, this::enableSelectedPack);
+    private final NsButton restartNow = new NsButton("Restart now", NsButton.Style.PRIMARY, () -> {
+        if (!com.nightshade.util.GameRestart.restart()) {
+            NightshadeClient.client().notifications().error("Restart", "Couldn't restart automatically - please close and reopen Minecraft");
+        }
+    });
     private final NsButton sortButton = new NsButton("", NsButton.Style.GHOST, this::cycleSort);
 
     /** Category chips: label and Modrinth category ("" = Recommended list, null = any category). */
@@ -586,6 +591,8 @@ public final class ModrinthScreen extends com.nightshade.gui.menu.NsMenuScreen {
             Fonts.draw(ctx, Fonts.trim(state, x2 - x1 - 20), x1 + 10, listBottom - 14, Theme.DANGER, false);
         } else if (kind == Kind.MODS && state != null && state.startsWith("Installed")) {
             Fonts.draw(ctx, "Restart Minecraft to load it", x1 + 10, listBottom - 14, Theme.WARNING, false);
+            int rw = restartNow.preferredWidth();
+            restartNow.render(ctx, x2 - 10 - rw, listBottom - 18, rw, 15, mouseX, mouseY);
         } else if (kind == Kind.RESOURCE_PACKS && packFiles.containsKey(hit.projectId()) && !"Enabled".equals(state)) {
             Fonts.draw(ctx, "Downloaded to resourcepacks - Enable turns it on now", x1 + 10, listBottom - 14, Theme.accentLight(), false);
         }
@@ -627,6 +634,10 @@ public final class ModrinthScreen extends com.nightshade.gui.menu.NsMenuScreen {
         int packsTabX = tabsX + tabModsW + 4;
         if (button == 0 && RenderUtil.isHovered(mouseX, mouseY, packsTabX, winY + 8, packsTabX + tabPacksW, winY + 23)) {
             switchKind(Kind.RESOURCE_PACKS);
+            return true;
+        }
+        if (kind == Kind.MODS && selected != null && installState.getOrDefault(selected.projectId(), "").startsWith("Installed")
+                && restartNow.click(mouseX, mouseY, button)) {
             return true;
         }
         if (kind == Kind.MODS && button == 0) {

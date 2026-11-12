@@ -13,7 +13,53 @@ import net.minecraft.client.gui.GuiGraphics;
 /** A module tile: status indicator, name, description, toggle, keybind and settings buttons. */
 public final class ModuleCard {
     public enum Action {
-        NONE, TOGGLE, OPEN_SETTINGS, BIND
+        NONE, TOGGLE, OPEN_SETTINGS, BIND, FAVOURITE
+    }
+
+    /** Favourite modules are listed first and get a filled star (stored as a config flag). */
+    public static boolean isFavourite(Module module) {
+        return NightshadeClient.client().config().hasFlag("fav:" + module.getId());
+    }
+
+    public static void toggleFavourite(Module module) {
+        var config = NightshadeClient.client().config();
+        if (isFavourite(module)) {
+            config.clearFlag("fav:" + module.getId());
+        } else {
+            config.setFlag("fav:" + module.getId());
+        }
+        config.saveDirty();
+    }
+
+    private String matchHint;
+
+    /** In search results: the setting that matched the query, shown under the name. */
+    public void setMatchHint(String hint) {
+        this.matchHint = hint;
+    }
+
+    private int starX() {
+        return switchX() - 16;
+    }
+
+    private int starY() {
+        return y + 9;
+    }
+
+    /** A 7x7 pixel star. */
+    private static void star(GuiGraphics ctx, int x, int y, int color, boolean filled) {
+        int[][] rows = {{3, 3}, {3, 3}, {0, 6}, {1, 5}, {1, 5}, {0, 2, 4, 6}, {0, 1, 5, 6}};
+        for (int r = 0; r < rows.length; r++) {
+            int[] seg = rows[r];
+            for (int i = 0; i + 1 < seg.length; i += 2) {
+                if (filled || r == 2 || i > 0 || seg[i] == seg[i + 1] || r >= 5) {
+                    RenderUtil.rect(ctx, x + seg[i], y + r, x + seg[i + 1] + 1, y + r + 1, color);
+                } else {
+                    RenderUtil.rect(ctx, x + seg[i], y + r, x + seg[i] + 1, y + r + 1, color);
+                    RenderUtil.rect(ctx, x + seg[i + 1], y + r, x + seg[i + 1] + 1, y + r + 1, color);
+                }
+            }
+        }
     }
 
     private final Module module;
@@ -101,21 +147,27 @@ public final class ModuleCard {
         ctx.fill(x + 6, y + 1, x + w - 6, y + 2, ColorUtil.withAlpha(0xFFFFFF, 0x10 + Math.round(0x14 * hp)));
         RenderUtil.roundedOutline(ctx, x, y, x + w, y + h, 6, ColorUtil.lerp(0x1CFFFFFF, ColorUtil.withAlpha(accent, 0x90), Math.max(hp * 0.6f, on * 0.5f)));
 
-        // Category chip + name
-        int chip = 16;
-        int cx = x + 8;
-        int cy = y + 6;
-        RenderUtil.roundedRect(ctx, cx, cy, cx + chip, cy + chip, 4, ColorUtil.lerp(0x22FFFFFF, ColorUtil.withAlpha(accent, 0x70), on));
-        int iconColor = suspended ? Theme.WARNING : ColorUtil.lerp(Theme.TEXT_MUTED, 0xFFFFFFFF, Math.max(on, hp));
-        com.nightshade.render.PixelIcons.category(ctx, module.getCategory(), cx + 4, cy + 4, iconColor);
+        // Module icon (a Minecraft item) + name
+        int chip = 20;
+        int cx = x + 7;
+        int cy = y + 4;
+        RenderUtil.roundedRect(ctx, cx, cy, cx + chip, cy + chip, 5, ColorUtil.lerp(0x22FFFFFF, ColorUtil.withAlpha(accent, 0x60), on));
+        ModuleIcons.draw(ctx, module, cx + 2, cy + 2);
+        if (suspended) {
+            RenderUtil.rect(ctx, cx + chip - 5, cy + chip - 5, cx + chip - 1, cy + chip - 1, Theme.WARNING);
+        }
         int tx = cx + chip + 6;
-        int nameMax = switchX() - tx - 6;
+        boolean favourite = isFavourite(module);
+        int nameMax = starX() - tx - 4;
         Fonts.draw(ctx, Fonts.trim(module.getName(), nameMax), tx, y + 7, module.isEnabled() ? 0xFFFFFFFF : Theme.TEXT, false);
         String sub;
         int subColor;
         if (suspended) {
             sub = "Suspended (category off)";
             subColor = Theme.WARNING;
+        } else if (matchHint != null) {
+            sub = "Setting: " + matchHint;
+            subColor = Theme.accentLight();
         } else if (showSubCategory) {
             sub = module.getCategory().displayName();
             subColor = Theme.accentLight();
@@ -124,6 +176,13 @@ public final class ModuleCard {
             subColor = module.isEnabled() ? Theme.accentLight() : Theme.TEXT_DIM;
         }
         Fonts.draw(ctx, Fonts.trim(sub, nameMax), tx, y + 17, subColor, false);
+
+        // Favourite star
+        boolean starHover = interactive && RenderUtil.isHovered(mouseX, mouseY, starX() - 2, starY() - 2, starX() + 9, starY() + 9);
+        if (favourite || hp > 0.01f) {
+            int starColor = favourite ? Theme.WARNING : ColorUtil.withAlpha(starHover ? 0xFFFFFFFF : Theme.TEXT_DIM, Math.round(0xFF * Math.max(hp, 0.2f)));
+            star(ctx, starX(), starY(), starColor, favourite || starHover);
+        }
 
         // Toggle switch or action button
         if (module.isToggleable()) {
@@ -186,6 +245,9 @@ public final class ModuleCard {
         }
         if (button != 0) {
             return Action.NONE;
+        }
+        if (RenderUtil.isHovered(mouseX, mouseY, starX() - 3, starY() - 3, starX() + 10, starY() + 10)) {
+            return Action.FAVOURITE;
         }
         if (RenderUtil.isHovered(mouseX, mouseY, bindX(), bottomY() - 1, bindX() + bindW(false), bottomY() + 12)) {
             return Action.BIND;

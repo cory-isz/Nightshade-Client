@@ -26,6 +26,15 @@ public final class MainMenuModule extends Module {
             .visibleWhen(() -> customPause.get() && pauseStats.get());
     private final BooleanSetting pausePlayer = add(new BooleanSetting("Show Player", "Show your character beside the pause menu", true))
             .visibleWhen(customPause::get);
+    private final com.nightshade.module.setting.ActionSetting setup = add(new com.nightshade.module.setting.ActionSetting("Setup",
+            "Run the first-launch setup again (playstyle, look and performance)", "Run Again", () -> {
+                com.nightshade.NightshadeClient.client().config().clearFlag(com.nightshade.gui.menu.SetupWizardScreen.FLAG);
+                if (mc.level == null) {
+                    mc.setScreen(createMenu());
+                } else {
+                    com.nightshade.NightshadeClient.client().notifications().info("Setup", "It will open next time you are on the main menu");
+                }
+            }));
     private final com.nightshade.module.setting.ActionSetting tour = add(new com.nightshade.module.setting.ActionSetting("Tour",
             "Show the first-launch tour of the main menu again", "Show Again", () -> {
                 com.nightshade.NightshadeClient.client().config().clearFlag("tourDone");
@@ -59,6 +68,10 @@ public final class MainMenuModule extends Module {
 
     /** The main menu in the chosen style. */
     public static net.minecraft.client.gui.screens.Screen createMenu() {
+        var client = com.nightshade.NightshadeClient.client();
+        if (client.isInitialized() && !client.config().hasFlag(com.nightshade.gui.menu.SetupWizardScreen.FLAG)) {
+            return new com.nightshade.gui.menu.SetupWizardScreen(); // first launch
+        }
         MainMenuModule m = active;
         String s = m == null ? STYLE_MODERN : m.style.get();
         if (STYLE_PREVIOUS.equals(s)) {

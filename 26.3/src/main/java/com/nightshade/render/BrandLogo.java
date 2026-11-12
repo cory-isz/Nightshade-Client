@@ -49,6 +49,24 @@ public final class BrandLogo {
         ctx.blit(RenderPipelines.GUI_TEXTURED, texture(pick), x, y, 0f, 0f, size, size, pick, pick, pick, pick, color);
     }
 
+    /**
+     * The flat logo mark (moon and flower, no box) in one colour - for top bars and the watermark, like the big
+     * clients' monochrome marks. {@code color} tints it (white, or the theme colour).
+     */
+    public static void drawMark(GuiGraphicsExtractor ctx, int x, int y, int size, int color) {
+        Minecraft mc = Minecraft.getInstance();
+        double pixels = size * mc.getWindow().getGuiScale() * Math.max(Math.abs(ctx.pose().m00()), 1e-3);
+        int pick = SIZES[SIZES.length - 1];
+        for (int s : SIZES) {
+            if (s >= pixels) {
+                pick = s;
+                break;
+            }
+        }
+        ctx.blit(RenderPipelines.GUI_TEXTURED, Identifier.fromNamespaceAndPath("nightshade", "textures/gui/logo_mark_" + pick + ".png"),
+                x, y, 0f, 0f, size, size, pick, pick, pick, pick, color);
+    }
+
     /** Replaces the vanilla window/taskbar icon (SDL in Minecraft 26.3+). Skipped on macOS, where it would change the Dock icon. */
     public static void applyWindowIcon(Minecraft mc) {
         if (Util.getPlatform() == Util.OS.OSX) {

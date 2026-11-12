@@ -259,10 +259,39 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
 
     /** A non-empty query searches every category; otherwise the current tab is shown. */
     private List<Module> visibleModules() {
+        List<Module> list;
         if (isSearching()) {
-            return manager.modules().search(query, null);
+            list = new java.util.ArrayList<>(manager.modules().search(query, null));
+            String needle = query.trim().toLowerCase(java.util.Locale.ROOT);
+            for (Module module : manager.modules().getModules()) {
+                String hint = null;
+                for (com.nightshade.module.ModuleSetting<?> setting : module.getSettings()) {
+                    if (setting.getName().toLowerCase(java.util.Locale.ROOT).contains(needle)) {
+                        hint = setting.getName();
+                        break;
+                    }
+                }
+                ModuleCard card = cards.get(module);
+                boolean nameMatch = list.contains(module);
+                if (card != null) {
+                    card.setMatchHint(nameMatch ? null : hint);
+                }
+                if (hint != null && !nameMatch) {
+                    list.add(module); // found through one of its settings
+                }
+            }
+        } else {
+            list = new java.util.ArrayList<>(manager.modules().search("", category));
+            for (Module module : list) {
+                ModuleCard card = cards.get(module);
+                if (card != null) {
+                    card.setMatchHint(null);
+                }
+            }
         }
-        return manager.modules().search("", category);
+        // favourites first, otherwise the usual order
+        list.sort(java.util.Comparator.comparing(m -> !ModuleCard.isFavourite(m)));
+        return list;
     }
 
     private boolean isSearching() {
@@ -504,6 +533,10 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
                     binding = module;
                     return true;
                 }
+                case FAVOURITE -> {
+                    ModuleCard.toggleFavourite(module);
+                    return true;
+                }
                 default -> {
                 }
             }
@@ -690,10 +723,11 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
 
     private void openSettings(Module module) {
         restartContentAnimation();
-        settings = new SettingsPanel(module);
+        settings = new SettingsPanel(module, isSearching() ? query : null);
         searchFocused = false;
-        scrollTarget = 0;
-        scroll.snap(0f);
+        // from a search: start at the first matching setting
+        scrollTarget = Math.max(0, settings.firstHighlightY() - 4);
+        scroll.snap((float) scrollTarget);
     }
 
     private void closeSettings() {
@@ -718,6 +752,19 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
     }
 
     /** Test hooks: screen-space points of a category tab and of the first module card (after one rendered frame). */
+    public void searchForTest(String text) {
+        query = text;
+        settings = null;
+    }
+
+    public List<Module> visibleForTest() {
+        return visibleModules();
+    }
+
+    public void openSettingsForTest(Module module) {
+        openSettings(module);
+    }
+
     public double[] tabPointForTest(ModuleCategory c) {
         int[] r = sidebar.tabRect(c);
         return new double[]{(r[0] + r[2]) / 2.0 * uiScale, (r[1] + r[3]) / 2.0 * uiScale};

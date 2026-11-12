@@ -66,8 +66,9 @@ public final class HudPresets {
                 "Day Counter", 0.0, 0.32, 1.0,
                 "Light Level", 0.0, 0.39, 1.0,
                 "Compass", 0.5, 0.0, 1.0,
-                "Waypoints", 1.0, 0.25, 1.0,
-                "Potion Effects", 1.0, 0.75, 1.0,
+                "Minimap", 1.0, 0.0, 1.0,
+                "Waypoints", 1.0, 0.52, 1.0,
+                "Potion Effects", 1.0, 0.78, 1.0,
                 "Armor Status", 1.0, 1.0, 1.0));
     }
 

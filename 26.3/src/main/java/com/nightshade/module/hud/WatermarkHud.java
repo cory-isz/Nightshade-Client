@@ -45,7 +45,7 @@ public final class WatermarkHud extends HudModule {
         int w = getWidth();
         int h = getHeight();
         drawBackground(context, w, h);
-        BrandLogo.draw(context, 3, (h - 10) / 2, 10);
+        BrandLogo.drawMark(context, 3, (h - 10) / 2, 10, com.nightshade.render.Theme.accentLight());
         int x = Fonts.draw(context, TITLE, 15, 4, Theme.accentLight(), shadow());
         if (showVersion.get()) {
             Fonts.draw(context, version(), x + 3, 4, Theme.TEXT_DIM, shadow());

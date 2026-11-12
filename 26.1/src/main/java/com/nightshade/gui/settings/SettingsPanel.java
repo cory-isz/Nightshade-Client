@@ -29,7 +29,20 @@ public final class SettingsPanel {
     private int w;
     private int contentTop;
 
+    private static final int SECTION_H = 16;
+    private static final java.util.Set<String> APPEARANCE = java.util.Set.of("scale", "background", "text shadow", "width", "size",
+            "shape", "style", "outline", "thickness", "opacity", "rounded", "font", "icon size");
+    /** Lower-case search text whose matching settings are highlighted (null = none). */
+    private final String highlight;
+    private final java.util.Map<SettingComponent<?>, int[]> resetRects = new java.util.HashMap<>();
+    private int highlightY = -1;
+
     public SettingsPanel(Module module) {
+        this(module, null);
+    }
+
+    public SettingsPanel(Module module, String highlight) {
+        this.highlight = highlight == null || highlight.isBlank() ? null : highlight.trim().toLowerCase(java.util.Locale.ROOT);
         this.module = module;
         for (ModuleSetting<?> setting : module.getSettings()) {
             components.add(SettingComponents.create(setting));
@@ -45,11 +58,64 @@ public final class SettingsPanel {
         return 40;
     }
 
-    /** Height of the scrollable content (rows). */
-    public int contentHeight() {
-        int height = 2 * (20 + ROW_GAP);
+    /** Colours and look-and-feel settings go in their own "Appearance" section. */
+    private static boolean appearance(ModuleSetting<?> setting) {
+        String name = setting.getName().toLowerCase(java.util.Locale.ROOT);
+        return setting instanceof com.nightshade.module.setting.ColorSetting || name.contains("color") || name.contains("colour")
+                || APPEARANCE.contains(name);
+    }
+
+    /** The visible settings split into sections, in their original order: [title, components...]. */
+    private java.util.List<java.util.Map.Entry<String, java.util.List<SettingComponent<?>>>> sections() {
+        java.util.List<SettingComponent<?>> main = new ArrayList<>();
+        java.util.List<SettingComponent<?>> look = new ArrayList<>();
         for (SettingComponent<?> component : components) {
             if (component.setting().isVisible()) {
+                (appearance(component.setting()) ? look : main).add(component);
+            }
+        }
+        java.util.List<java.util.Map.Entry<String, java.util.List<SettingComponent<?>>>> out = new ArrayList<>();
+        if (!main.isEmpty()) {
+            out.add(java.util.Map.entry("Settings", main));
+        }
+        if (!look.isEmpty()) {
+            out.add(java.util.Map.entry("Appearance", look));
+        }
+        return out;
+    }
+
+    private boolean matches(SettingComponent<?> component) {
+        return highlight != null && component.setting().getName().toLowerCase(java.util.Locale.ROOT).contains(highlight);
+    }
+
+    /** Offset of the first highlighted setting in the content (0 when none), for scrolling to it. */
+    public int firstHighlightY() {
+        int y = SECTION_H + 2 * (20 + ROW_GAP);
+        for (var section : sections()) {
+            y += SECTION_H;
+            for (SettingComponent<?> component : section.getValue()) {
+                if (matches(component)) {
+                    return y;
+                }
+                y += component.height() + ROW_GAP;
+            }
+        }
+        return 0;
+    }
+
+    private void sectionTitle(GuiGraphicsExtractor ctx, String title, int y) {
+        String text = title.toUpperCase(java.util.Locale.ROOT);
+        Fonts.draw(ctx, text, x + 2, y + 4, Theme.accentLight(), false);
+        int lx = x + 2 + Fonts.width(text) + 6;
+        RenderUtil.horizontalGradient(ctx, lx, y + 8, x + w, y + 9, com.nightshade.render.ColorUtil.withAlpha(Theme.accent(), 0x80), 0x00000000);
+    }
+
+    /** Height of the scrollable content (rows). */
+    public int contentHeight() {
+        int height = SECTION_H + 2 * (20 + ROW_GAP);
+        for (var section : sections()) {
+            height += SECTION_H;
+            for (SettingComponent<?> component : section.getValue()) {
                 height += component.height() + ROW_GAP;
             }
         }
@@ -85,6 +151,8 @@ public final class SettingsPanel {
     public void renderContent(GuiGraphicsExtractor ctx, int top, int mouseX, int mouseY, boolean binding) {
         contentTop = top;
         int rowY = top;
+        sectionTitle(ctx, "Controls", rowY);
+        rowY += SECTION_H;
         // Keybind row
         RenderUtil.roundedRect(ctx, x, rowY, x + w, rowY + 20, 3, Theme.PANEL);
         Fonts.draw(ctx, "Keybind", x + 6, rowY + 6, Theme.TEXT, false);
@@ -114,12 +182,27 @@ public final class SettingsPanel {
                 Theme.TEXT, Theme.SELECTED);
         rowY += 20 + ROW_GAP;
 
-        for (SettingComponent<?> component : components) {
-            if (!component.setting().isVisible()) {
-                continue;
+        resetRects.clear();
+        for (var section : sections()) {
+            sectionTitle(ctx, section.getKey(), rowY);
+            rowY += SECTION_H;
+            for (SettingComponent<?> component : section.getValue()) {
+                component.render(ctx, x, rowY, w, mouseX, mouseY);
+                if (matches(component)) {
+                    RenderUtil.roundedOutline(ctx, x - 1, rowY - 1, x + w + 1, rowY + component.height() + 1, 4, Theme.accentLight());
+                }
+                // A small "Reset" next to the name of a changed setting.
+                ModuleSetting<?> setting = component.setting();
+                if (setting.persistent() && !setting.isDefault()) {
+                    int rx = x + 6 + Fonts.width(setting.getName()) + 6;
+                    int rw = Fonts.width("Reset") + 6;
+                    boolean hov = RenderUtil.isHovered(mouseX, mouseY, rx, rowY + 4, rx + rw, rowY + 15);
+                    RenderUtil.roundedRect(ctx, rx, rowY + 4, rx + rw, rowY + 15, 3, hov ? com.nightshade.render.ColorUtil.withAlpha(Theme.WARNING, 0x50) : 0x28FFFFFF);
+                    Fonts.draw(ctx, "Reset", rx + 3, rowY + 6, hov ? Theme.WARNING : Theme.TEXT_DIM, false);
+                    resetRects.put(component, new int[]{rx, rowY + 4, rx + rw, rowY + 15});
+                }
+                rowY += component.height() + ROW_GAP;
             }
-            component.render(ctx, x, rowY, w, mouseX, mouseY);
-            rowY += component.height() + ROW_GAP;
         }
     }
 
@@ -152,7 +235,16 @@ public final class SettingsPanel {
     }
 
     public Action clickContent(double mouseX, double mouseY, int button) {
-        int rowY = contentTop;
+        if (button == 0) {
+            for (var e : resetRects.entrySet()) {
+                int[] r = e.getValue();
+                if (RenderUtil.isHovered(mouseX, mouseY, r[0], r[1], r[2], r[3])) {
+                    e.getKey().setting().reset();
+                    return Action.CONSUMED;
+                }
+            }
+        }
+        int rowY = contentTop + SECTION_H;
         if (RenderUtil.isHovered(mouseX, mouseY, x, rowY, x + w, rowY + 20)) {
             int clearW = GuiDraw.pillWidth("Clear");
             int clearX = x + w - clearW - 5;
