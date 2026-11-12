@@ -147,16 +147,8 @@ public final class ModuleCard {
         ctx.fill(x + 6, y + 1, x + w - 6, y + 2, ColorUtil.withAlpha(0xFFFFFF, 0x10 + Math.round(0x14 * hp)));
         RenderUtil.roundedOutline(ctx, x, y, x + w, y + h, 6, ColorUtil.lerp(0x1CFFFFFF, ColorUtil.withAlpha(accent, 0x90), Math.max(hp * 0.6f, on * 0.5f)));
 
-        // Module icon (a Minecraft item) + name
-        int chip = 20;
-        int cx = x + 7;
-        int cy = y + 4;
-        RenderUtil.roundedRect(ctx, cx, cy, cx + chip, cy + chip, 5, ColorUtil.lerp(0x22FFFFFF, ColorUtil.withAlpha(accent, 0x60), on));
-        ModuleIcons.draw(ctx, module, cx + 2, cy + 2);
-        if (suspended) {
-            RenderUtil.rect(ctx, cx + chip - 5, cy + chip - 5, cx + chip - 1, cy + chip - 1, Theme.WARNING);
-        }
-        int tx = cx + chip + 6;
+        // Name
+        int tx = x + 8;
         boolean favourite = isFavourite(module);
         int nameMax = starX() - tx - 4;
         Fonts.draw(ctx, Fonts.trim(module.getName(), nameMax), tx, y + 7, module.isEnabled() ? 0xFFFFFFFF : Theme.TEXT, false);

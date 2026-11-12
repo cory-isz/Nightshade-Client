@@ -19,7 +19,6 @@ import com.nightshade.render.Theme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.item.Items;
 
 import java.util.List;
 
@@ -31,18 +30,18 @@ public final class SetupWizardScreen extends NsMenuScreen {
     public static final String FLAG = "setupDone";
     private static final int STEPS = 4;
 
-    private record Choice(String title, String description, net.minecraft.world.item.Item icon) {
+    private record Choice(String title, String description) {
     }
 
     private static final Choice[] PLAYSTYLES = {
-            new Choice("PvP", "Keystrokes, CPS, target HUD, cooldowns and a clean crosshair", Items.DIAMOND_SWORD),
-            new Choice("Survival", "Minimap, coordinates, biome, waypoints and light levels", Items.GRASS_BLOCK),
-            new Choice("Streamer", "Big readable stats, no coordinates or server address, Discord status", Items.JUKEBOX),
-            new Choice("Minimal", "Just FPS, potions and armour - out of the way", Items.FEATHER)};
+            new Choice("PvP", "Keystrokes, CPS, target HUD, cooldowns and a clean crosshair"),
+            new Choice("Survival", "Minimap, coordinates, biome, waypoints and light levels"),
+            new Choice("Streamer", "Big readable stats, no coordinates or server address, Discord status"),
+            new Choice("Minimal", "Just FPS, potions and armour - out of the way")};
     private static final Choice[] PERFORMANCE = {
-            new Choice("Quality", "Everything looks like vanilla; only things you cannot see are skipped", Items.DIAMOND),
-            new Choice("Balanced", "Fewer particles and distant extras - recommended", Items.GOLD_INGOT),
-            new Choice("Max FPS", "Fewest particles, no clouds or rain, slower water animation", Items.REDSTONE)};
+            new Choice("Quality", "Everything looks like vanilla; only things you cannot see are skipped"),
+            new Choice("Balanced", "Fewer particles and distant extras - recommended"),
+            new Choice("Max FPS", "Fewest particles, no clouds or rain, slower water animation")};
     private static final String[] BACKGROUNDS = {"Aurora Peaks", "Night Forest", "Deep Space", "Nightshade Sky"};
 
     private int step;
@@ -255,16 +254,15 @@ public final class SetupWizardScreen extends NsMenuScreen {
             }
             RenderUtil.roundedRect(ctx, x, top, x + cw, top + ch, 8, sel ? ColorUtil.withAlpha(Theme.accent(), 0x45) : hov ? 0x30FFFFFF : 0x22000000);
             RenderUtil.roundedOutline(ctx, x, top, x + cw, top + ch, 8, sel ? Theme.accentLight() : hov ? ColorUtil.withAlpha(Theme.accent(), 0x90) : 0x1CFFFFFF);
-            // big icon
+            // title, larger, with a short accent line under it
             ctx.pose().pushMatrix();
-            ctx.pose().translate(x + cw / 2f - 16, top + 16);
-            ctx.pose().scale(2f, 2f);
-            if (!com.nightshade.gui.ModuleIcons.drawItem(ctx, choices[i].icon(), 0, 0)) {
-                Fonts.drawCentered(ctx, choices[i].title().substring(0, 1), 8, 4, Theme.accentLight(), false);
-            }
+            ctx.pose().translate(x + cw / 2f, top + 22);
+            ctx.pose().scale(1.5f, 1.5f);
+            Fonts.drawCentered(ctx, choices[i].title(), 0, 0, sel ? 0xFFFFFFFF : Theme.TEXT, false);
             ctx.pose().popMatrix();
-            Fonts.drawCentered(ctx, choices[i].title(), x + cw / 2, top + 56, sel ? 0xFFFFFFFF : Theme.TEXT, false);
-            int ly = top + 72;
+            RenderUtil.roundedRect(ctx, x + cw / 2 - 12, top + 42, x + cw / 2 + 12, top + 44, 1,
+                    sel ? Theme.accentLight() : ColorUtil.withAlpha(Theme.accent(), 0x70));
+            int ly = top + 56;
             for (FormattedCharSequence line : font.split(Fonts.text(choices[i].description()), cw - 16)) {
                 ctx.text(font, line, x + cw / 2 - font.width(line) / 2, ly, Theme.TEXT_MUTED, false);
                 ly += Fonts.height() + 2;
