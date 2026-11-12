@@ -10,7 +10,6 @@ import com.nightshade.module.setting.BooleanSetting;
 import com.nightshade.module.setting.ModeSetting;
 import com.nightshade.module.setting.NumberSetting;
 import com.nightshade.render.ColorUtil;
-import com.nightshade.render.Credits;
 import com.nightshade.render.Fonts;
 import com.nightshade.render.Fx;
 import com.nightshade.render.MenuBackground;
@@ -235,7 +234,6 @@ public final class SetupWizardScreen extends NsMenuScreen {
         if (step > 0) {
             back.render(ctx, x2 - 18 - 90 - 6 - 70, fy, 70, 18, mouseX, mouseY);
         }
-        Credits.draw(ctx, width / 2, y2 + 6, 0.6f);
         Notifications.renderIfEnabled(ctx);
     }
 

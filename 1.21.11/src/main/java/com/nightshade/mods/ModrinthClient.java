@@ -259,6 +259,78 @@ public final class ModrinthClient {
         return hits;
     }
 
+    /** Every Fabric version listed for this Minecraft version, releases first (newest first within each group). */
+    public List<Version> candidateVersions(String projectId) throws IOException, InterruptedException {
+        JsonElement root = get("/project/" + enc(projectId) + "/version?loaders=" + enc("[\"fabric\"]")
+                + "&game_versions=" + enc("[\"" + gameVersion + "\"]"));
+        List<Version> releases = new ArrayList<>();
+        List<Version> others = new ArrayList<>();
+        if (root != null && root.isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray()) {
+                Version version = parseVersion(element.getAsJsonObject());
+                if (version != null) {
+                    (version.versionType().equals("release") ? releases : others).add(version);
+                }
+            }
+        }
+        releases.addAll(others);
+        return releases;
+    }
+
+    /** Thrown when a downloaded jar says it does not run on this Minecraft version. */
+    public static final class IncompatibleJarException extends IOException {
+        public IncompatibleJarException(String message) {
+            super(message);
+        }
+    }
+
+    /**
+     * Checks the "minecraft" requirement inside a mod jar's fabric.mod.json against the running game. Modrinth tags
+     * are set by hand and are sometimes wider than what the jar itself accepts (e.g. a 26.1 build tagged for 26.1.2);
+     * Fabric would then refuse to start the game, so such jars are never installed.
+     */
+    static void checkJarRunsHere(Path jar, String fileName) throws IOException {
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(jar.toFile())) {
+            java.util.zip.ZipEntry entry = zip.getEntry("fabric.mod.json");
+            if (entry == null) {
+                return;
+            }
+            JsonObject meta;
+            try (InputStream in = zip.getInputStream(entry)) {
+                meta = com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            }
+            if (!meta.has("depends") || !meta.get("depends").isJsonObject() || !meta.getAsJsonObject("depends").has("minecraft")) {
+                return;
+            }
+            JsonElement req = meta.getAsJsonObject("depends").get("minecraft");
+            List<String> ranges = new ArrayList<>();
+            if (req.isJsonArray()) {
+                req.getAsJsonArray().forEach(e -> ranges.add(e.getAsString()));
+            } else {
+                ranges.add(req.getAsString());
+            }
+            var game = net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("minecraft")
+                    .map(c -> c.getMetadata().getVersion()).orElse(null);
+            if (game == null) {
+                return;
+            }
+            for (String range : ranges) {
+                try {
+                    if (net.fabricmc.loader.api.metadata.version.VersionPredicate.parse(range).test(game)) {
+                        return;
+                    }
+                } catch (Exception e) {
+                    return; // a requirement we cannot read: let Fabric decide, as before
+                }
+            }
+            throw new IncompatibleJarException(fileName + " needs Minecraft " + String.join(" or ", ranges) + " (you have " + game.getFriendlyString() + ")");
+        } catch (IncompatibleJarException e) {
+            throw e;
+        } catch (Exception e) {
+            // unreadable jar metadata: keep the old behaviour
+        }
+    }
+
     /** Newest compatible version (releases preferred over betas), or null when none exists for this version. */
     @Nullable
     public Version latestVersion(String projectId) throws IOException, InterruptedException {
@@ -453,22 +525,34 @@ public final class ModrinthClient {
             installed.add(projectId);
             return; // e.g. Fabric API already installed from another source
         }
-        Version version = latestVersion(projectId);
-        if (version == null) {
+        List<Version> candidates = candidateVersions(projectId);
+        if (candidates.isEmpty()) {
             if (depth == 0) {
                 throw new IOException("No version for Fabric " + gameVersion);
             }
             Log.warn("Required dependency {} has no Fabric {} version", projectId, gameVersion);
             return;
         }
-        installed.add(projectId);
-        installed.add(version.projectId());
-        for (String dependency : version.requiredProjects()) {
-            installRecursive(dependency, modsDir, installed, written, status, depth + 1);
+        IncompatibleJarException lastIncompatible = null;
+        for (Version version : candidates.subList(0, Math.min(8, candidates.size()))) {
+            installed.add(projectId);
+            installed.add(version.projectId());
+            for (String dependency : version.requiredProjects()) {
+                installRecursive(dependency, modsDir, installed, written, status, depth + 1);
+            }
+            status.accept("Downloading " + version.file().filename());
+            try {
+                download(version.file(), modsDir);
+                written.add(version.file().filename());
+                return;
+            } catch (IncompatibleJarException e) {
+                lastIncompatible = e; // tagged for this version on Modrinth but the jar says otherwise: try the next one
+                Log.info("Skipped {}: {}", version.file().filename(), e.getMessage());
+            }
         }
-        status.accept("Downloading " + version.file().filename());
-        download(version.file(), modsDir);
-        written.add(version.file().filename());
+        if (depth == 0 && lastIncompatible != null) {
+            throw new IOException("No build of this mod runs on Minecraft " + gameVersion + " yet (" + lastIncompatible.getMessage() + ")");
+        }
     }
 
     /** True when a loaded mod's id matches the project's slug (Modrinth slugs usually equal Fabric mod ids). */
@@ -512,6 +596,14 @@ public final class ModrinthClient {
         if (!actual.equalsIgnoreCase(file.sha512())) {
             Files.deleteIfExists(temp);
             throw new IOException("Checksum mismatch for " + name + " - download discarded");
+        }
+        if (extension.equals(".jar")) {
+            try {
+                checkJarRunsHere(temp, name);
+            } catch (IncompatibleJarException e) {
+                Files.deleteIfExists(temp);
+                throw e;
+            }
         }
         Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
         return target;

@@ -50,7 +50,7 @@ cd 26.3
 ./gradlew jar
 ```
 
-The jar is written to `build/libs/`, for example `Nightshade-Client1.25.0-1.21.11.jar`. On Windows use `gradlew.bat` instead of `./gradlew`.
+The jar is written to `build/libs/`, for example `Nightshade-Client1.26.0-1.21.11.jar`. On Windows use `gradlew.bat` instead of `./gradlew`.
 
 ## Installing
 
@@ -62,6 +62,3 @@ The jar is written to `build/libs/`, for example `Nightshade-Client1.25.0-1.21.1
 
 All Rights Reserved. See [LICENSE](LICENSE).
 
----
-
-*Made and developed by Itz_cory.*

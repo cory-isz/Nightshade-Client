@@ -558,14 +558,6 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
         Fonts.draw(ctx, left, 8, height - 12, ColorUtil.fade(Theme.TEXT_DIM, a), false);
         String copyright = "Copyright Mojang AB. Do not distribute!";
         Fonts.draw(ctx, copyright, width - Fonts.width(copyright) - 8, height - 12, ColorUtil.fade(Theme.TEXT_DIM, a), false);
-        int cw = com.nightshade.render.Credits.width();
-        int leftEnd = 8 + Fonts.width(left) + 10;
-        int rightStart = width - Fonts.width(copyright) - 18;
-        if (rightStart - leftEnd >= cw) {
-            com.nightshade.render.Credits.draw(ctx, (leftEnd + rightStart) / 2, height - 12, a);
-        } else {
-            com.nightshade.render.Credits.drawAt(ctx, 8, height - 22, a);
-        }
     }
 
     /** One-time card pointing to the older menus. */

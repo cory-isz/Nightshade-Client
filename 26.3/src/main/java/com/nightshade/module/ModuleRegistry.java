@@ -74,6 +74,12 @@ public final class ModuleRegistry {
         manager.register(new com.nightshade.module.utility.MediaKeys.PlayPause());
         manager.register(new com.nightshade.module.utility.MediaKeys.Next());
         manager.register(new com.nightshade.module.utility.MediaKeys.Previous());
+        manager.register(new com.nightshade.module.utility.ChatHotkeys.One());
+        manager.register(new com.nightshade.module.utility.ChatHotkeys.Two());
+        manager.register(new com.nightshade.module.utility.ChatHotkeys.Three());
+        manager.register(new com.nightshade.module.utility.ChatHotkeys.Four());
+        manager.register(new com.nightshade.module.utility.HypixelTools.QuickPlay());
+        manager.register(new com.nightshade.module.utility.HypixelTools.AutoTip());
         manager.register(new CoordinatesHud());
         manager.register(new ModuleListHud());
         manager.register(new PotionEffectsHud());

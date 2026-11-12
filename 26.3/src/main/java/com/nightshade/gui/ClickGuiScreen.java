@@ -442,12 +442,6 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
         button(ctx, saveX, footerY, "Save", true, free && RenderUtil.isHovered(mouseX, mouseY, saveX, footerY, saveX + saveW, footerY + 15));
         int statusMax = keysX - mainX1 - 10;
         Fonts.draw(ctx, Fonts.trim(status, statusMax), mainX1, footerY + 4, binding != null ? Theme.accentLight() : Theme.TEXT_DIM, false);
-        int cw = com.nightshade.render.Credits.width();
-        if (binding == null && mainX1 + Fonts.width(status) + 16 + cw + 16 < keysX) {
-            com.nightshade.render.Credits.drawAt(ctx, Math.max(mainX1 + Fonts.width(status) + 16, (mainX1 + keysX - cw) / 2), footerY + 4, 1f);
-        } else if (binding == null && height - 9 > footerY + 15) {
-            com.nightshade.render.Credits.draw(ctx, width / 2, height - 9, 1f);
-        }
     }
 
     // ------------------------------------------------------------------ input

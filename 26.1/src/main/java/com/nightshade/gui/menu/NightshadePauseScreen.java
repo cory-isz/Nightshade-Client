@@ -203,7 +203,6 @@ public final class NightshadePauseScreen extends NsMenuScreen {
         drawRow(ctx, new Row("quit", quit, "", PixelIcons.MENU_QUIT, this::quit, true, true), x1, y, x2, rowH, mouseX, mouseY, appear(3 + rows.size()));
 
         renderStats(ctx, appear(4 + rows.size()));
-        com.nightshade.render.Credits.drawAt(ctx, width - com.nightshade.render.Credits.width() - 10, height - 14, appear(4 + rows.size()));
         Notifications.renderIfEnabled(ctx);
     }
 

@@ -5,7 +5,6 @@ import com.nightshade.gui.widget.NsButton;
 import com.nightshade.module.interfaces.Notifications;
 import com.nightshade.module.visual.CustomCrosshair;
 import com.nightshade.render.ColorUtil;
-import com.nightshade.render.Credits;
 import com.nightshade.render.CrosshairPattern;
 import com.nightshade.render.Fonts;
 import com.nightshade.render.Fx;
@@ -298,7 +297,6 @@ public final class CrosshairEditorScreen extends NsMenuScreen {
         } else {
             Fonts.draw(ctx, pattern.count() + " pixels", px1 + 14 + 172, fy + 5, Theme.TEXT_DIM, false);
         }
-        Credits.draw(ctx, width / 2, py2 + 4, 0.6f);
         Notifications.renderIfEnabled(ctx);
     }
 
