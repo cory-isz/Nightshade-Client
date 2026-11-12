@@ -66,9 +66,18 @@ public final class Notifications extends Module {
         int[] avoid = inMenu ? null : moduleListBounds(screenW, screenH);
         context.pose().pushMatrix();
         // Menus show only the newest toast so stacked messages never cover a screen's controls.
-        int oldest = inMenu ? list.size() - 1 : 0;
-        for (int i = list.size() - 1; i >= oldest; i--) {
+        int shown = inMenu ? 1 : 4;
+        int oldest = Math.max(0, list.size() - shown);
+        int baseY = y;
+        int slot = 0;
+        for (int i = list.size() - 1; i >= oldest; i--, slot++) {
             Notification notification = list.get(i);
+            // glide to the slot instead of jumping when a toast above disappears
+            float target = baseY + (bottom ? -1 : 1) * slot * (height + 4);
+            if (notification.offset().get() < 0f) {
+                notification.offset().snap(target);
+            }
+            y = Math.round(notification.offset().setTarget(target).update());
             float slide = notification.slide().update();
             int width = Math.max(110, Math.max(Fonts.width(notification.title()), Fonts.width(notification.message())) + 18);
             int rightEdge = screenW;
@@ -86,10 +95,18 @@ public final class Notifications extends Module {
             RenderUtil.roundedOutline(context, x, y, x + width, y + height, 4, ColorUtil.fade(Theme.BORDER, slide));
             RenderUtil.rect(context, x + 1, y + 4, x + 3, y + height - 4, ColorUtil.fade(accent, slide));
             Fonts.draw(context, notification.title(), x + 9, y + 4, ColorUtil.fade(Theme.TEXT, slide), false);
+            if (notification.count() > 1) {
+                String times = "x" + notification.count();
+                Fonts.draw(context, times, x + width - 6 - Fonts.width(times), y + 4, ColorUtil.fade(accent, slide), false);
+            }
             Fonts.draw(context, notification.message(), x + 9, y + 5 + Fonts.height(), ColorUtil.fade(Theme.TEXT_MUTED, slide), false);
             float life = notification.lifeFraction(now);
             RenderUtil.rect(context, x + 4, y + height - 2, x + 4 + Math.round((width - 8) * life), y + height - 1, ColorUtil.fade(accent, slide * 0.7f));
-            y += bottom ? -(height + 4) : height + 4;
+        }
+        if (oldest > 0 && !inMenu) {
+            String more = "+" + oldest + " more";
+            int my = baseY + (bottom ? -1 : 1) * shown * (height + 4) + (bottom ? height - Fonts.height() : 0);
+            Fonts.draw(context, more, screenW - 6 - Fonts.width(more), my, Theme.TEXT_DIM, true);
         }
         context.pose().popMatrix();
     }

@@ -38,9 +38,11 @@ public final class HitFeedback extends HudModule {
     private int hits;
     private int sprintHits;
     private int crits;
+    private final long[] hitTimes = new long[6];
+    private int hitTimeCount;
 
     public HitFeedback() {
-        super("Hit Feedback", "Shows CRIT or SPRINT when your hit lands, and your sprint-hit rate", ModuleCategory.PVP, 0.5, 0.6, false);
+        super("Hit Feedback", "Shows CRIT or SPRINT when your hit lands, your sprint-hit rate and hit delay", ModuleCategory.PVP, 0.5, 0.6, false);
         listen(AttackEntityEvent.class, event -> {
             if (mc.player == null || !(event.target() instanceof LivingEntity)) {
                 return;
@@ -59,6 +61,9 @@ public final class HitFeedback extends HudModule {
             }
             pendingTarget = null;
             hits++;
+            System.arraycopy(hitTimes, 0, hitTimes, 1, hitTimes.length - 1);
+            hitTimes[0] = System.currentTimeMillis();
+            hitTimeCount = Math.min(hitTimes.length, hitTimeCount + 1);
             if (pendingCrit) {
                 crits++;
                 show("CRIT", 0xFFFFC857);
@@ -83,6 +88,7 @@ public final class HitFeedback extends HudModule {
         hits = 0;
         sprintHits = 0;
         crits = 0;
+        hitTimeCount = 0;
     }
 
     /** Test hooks. */
@@ -94,9 +100,24 @@ public final class HitFeedback extends HudModule {
         return hits;
     }
 
+    /** Average time between your last few confirmed hits in ms, or -1 when unknown (gaps over 2 s are a new fight). */
+    public int hitDelayMs() {
+        long total = 0;
+        int n = 0;
+        for (int i = 0; i + 1 < hitTimeCount; i++) {
+            long gap = hitTimes[i] - hitTimes[i + 1];
+            if (gap > 2000) {
+                break;
+            }
+            total += gap;
+            n++;
+        }
+        return n == 0 ? -1 : (int) (total / n);
+    }
+
     @Override
     public int getWidth() {
-        return 96;
+        return 130;
     }
 
     @Override

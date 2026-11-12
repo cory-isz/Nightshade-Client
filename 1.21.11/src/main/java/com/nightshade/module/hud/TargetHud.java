@@ -22,6 +22,8 @@ public final class TargetHud extends HudModule {
     private final NumberSetting hideAfter = add(new NumberSetting("Hide After", "Seconds after the last hit before hiding", 5, 1, 30, 1, "s"));
     private final BooleanSetting showDamage = add(new BooleanSetting("Last Hit Damage", "Show how much health your last hit removed", true));
     private final BooleanSetting showGear = add(new BooleanSetting("Show Gear", "Show what your target is holding and wearing", true));
+    private final BooleanSetting armourWarning = add(new BooleanSetting("Armour Warning", "Mark your target's armour pieces that are about to break", true));
+    private final NumberSetting breakAt = add(new NumberSetting("Warn Below", "Warn when a piece has less durability left than this", 15, 5, 50, 5, "%"));
     private final BooleanSetting showTrade = add(new BooleanSetting("Hit Trade", "Hits you landed on them : hits they landed on you", true));
 
     private LivingEntity target;
@@ -139,14 +141,25 @@ public final class TargetHud extends HudModule {
                 context.renderItem(held, ix, 0);
                 ix += 22;
             }
+            boolean breaking = false;
             for (net.minecraft.world.entity.EquipmentSlot slot : ARMOR) {
                 net.minecraft.world.item.ItemStack piece = target.getItemBySlot(slot);
                 if (!piece.isEmpty()) {
+                    if (piece.isDamageableItem() && piece.getMaxDamage() > 0
+                            && 1f - piece.getDamageValue() / (float) piece.getMaxDamage() < breakAt.floatValue() / 100f) {
+                        // nearly broken: red tile behind it
+                        RenderUtil.roundedRect(context, ix - 1, -1, ix + 17, 17, 3, 0xA0FF3B5C);
+                        breaking = true;
+                    }
                     context.renderItem(piece, ix, 0);
                     ix += 17;
                 }
             }
             context.pose().popMatrix();
+            if (breaking && armourWarning.get()) {
+                int tx = gx + Math.round(ix * 0.75f) + 4;
+                Fonts.draw(context, "Armour breaking", tx, 38, Theme.DANGER, shadow());
+            }
         }
     }
 }

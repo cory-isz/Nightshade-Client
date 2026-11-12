@@ -148,6 +148,7 @@ public final class ModuleRegistry {
         manager.register(new com.nightshade.module.visual.OldAnimations());
         manager.register(new com.nightshade.module.performance.FpsBoost());
         manager.register(new com.nightshade.module.pvp.HitFeedback());
+        manager.register(new com.nightshade.module.pvp.Trajectories());
         manager.register(new AutoGG());
         manager.register(new ShieldStatus());
         manager.register(new com.nightshade.module.pvp.Hitboxes());
@@ -159,6 +160,8 @@ public final class ModuleRegistry {
         manager.register(new HudEditorModule());
         manager.register(new com.nightshade.module.interfaces.VanillaHud());
         manager.register(new Notifications());
+        manager.register(new com.nightshade.module.interfaces.KeybindOverlay());
+        manager.register(new com.nightshade.module.interfaces.ServerTips());
         manager.register(new MainMenuModule());
         manager.register(new ProfilesModule());
 

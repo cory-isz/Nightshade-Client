@@ -14,6 +14,7 @@ public final class MenuOptimizer extends Module {
     private static volatile MenuOptimizer active;
     private final BooleanSetting noBlur = add(new BooleanSetting("Skip Blur", "Tint the world behind menus instead of blurring it (the most expensive effect)", true));
     private final BooleanSetting noLights = add(new BooleanSetting("Skip Floating Lights", "No drifting light motes on the menu background", true));
+    private final BooleanSetting noTransitions = add(new BooleanSetting("Skip Transitions", "Open menus instantly instead of easing them in", false));
     private final BooleanSetting noGlow = add(new BooleanSetting("Skip Glows", "No soft glow behind hovered buttons and cards", false));
 
     public MenuOptimizer() {
@@ -29,6 +30,12 @@ public final class MenuOptimizer extends Module {
     @Override
     protected void onDisable() {
         active = null;
+    }
+
+    /** Whether Nightshade screens ease in when they open. */
+    public static boolean allowTransitions() {
+        MenuOptimizer m = active;
+        return m == null || !m.noTransitions.get();
     }
 
     /** Whether menus may blur the world behind them. */

@@ -4,6 +4,8 @@
   "package": "com.nightshade.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "ClientLevelTickMixin",
+    "ParticleMixin",
     "CameraMixin",
     "ChatHudMixin",
     "ClientPlayNetworkHandlerMixin",

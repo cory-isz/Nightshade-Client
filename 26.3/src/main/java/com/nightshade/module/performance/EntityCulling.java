@@ -21,6 +21,8 @@ public final class EntityCulling extends Module {
 
     private final NumberSetting range = add(new NumberSetting("Max Distance", "Entities further away than this are left to Minecraft", 64, 16, 128, 8, " blocks"));
     private final NumberSetting recheck = add(new NumberSetting("Recheck Every", "How often each entity's visibility is tested again", 3, 1, 10, 1, " ticks"));
+    private final BooleanSetting tickCulling = add(new BooleanSetting("Tick Culling", "Also skip updating hidden mobs and far dropped items on your side (big FPS win in busy areas)", true));
+    private final NumberSetting itemTickRange = add(new NumberSetting("Item Update Range", "Dropped items and XP orbs further than this stop updating on your side", 24, 8, 64, 4, " blocks")).visibleWhen(tickCulling::get);
     private final BooleanSetting players = add(new BooleanSetting("Cull Players", "Also hide players behind walls (their name tags disappear too)", false));
 
     /** entity id -> (game time of the test << 1) | visible */
@@ -45,6 +47,40 @@ public final class EntityCulling extends Module {
     protected void onDisable() {
         active = null;
         cache.clear();
+    }
+
+    private static long ticksSkipped;
+
+    public static long ticksSkippedTotal() {
+        return ticksSkipped;
+    }
+
+    /**
+     * Hook from ClientLevelTickMixin: true when this entity's client-side update can be skipped this tick. Only for
+     * things you cannot see (hidden behind walls in the last few frames) or dropped items / XP orbs far away; never
+     * players, vehicles, riders, projectiles or anything glowing. The server still runs the entity as normal.
+     */
+    public static boolean skipTick(Entity entity) {
+        EntityCulling module = active;
+        if (module == null || !module.tickCulling.get() || mc.player == null || mc.level == null || entity == mc.player
+                || entity == mc.getCameraEntity() || entity instanceof Player || entity.isVehicle() || entity.isPassenger()
+                || entity instanceof net.minecraft.world.entity.projectile.Projectile || entity.isCurrentlyGlowing()
+                || entity instanceof net.minecraft.world.entity.vehicle.VehicleEntity) {
+            return false;
+        }
+        boolean far = (entity instanceof net.minecraft.world.entity.item.ItemEntity || entity instanceof net.minecraft.world.entity.ExperienceOrb)
+                && entity.distanceToSqr(mc.player) > module.itemTickRange.get() * module.itemTickRange.get();
+        boolean hidden = false;
+        if (!far) {
+            long cached = module.cache.getOrDefault(entity.getId(), Long.MIN_VALUE);
+            hidden = cached != Long.MIN_VALUE && (cached & 1L) == 0 && mc.level.getGameTime() - (cached >> 1) < 20;
+        }
+        if (far || hidden) {
+            ticksSkipped++;
+            EffectProbe.hit("Entity Culling");
+            return true;
+        }
+        return false;
     }
 
     public static long culledTotal() {

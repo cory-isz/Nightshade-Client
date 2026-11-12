@@ -68,6 +68,7 @@ public final class FpsBoost extends Module {
             saved.addProperty("biomeBlendRadius", o.biomeBlendRadius().get());
             saved.addProperty("particles", o.particles().get().name());
             saved.addProperty("enableVsync", o.enableVsync().get());
+            saved.addProperty("prioritizeChunkUpdates", o.prioritizeChunkUpdates().get().name());
             try {
                 Files.createDirectories(undoFile().getParent());
                 Files.writeString(undoFile(), saved.toString(), StandardCharsets.UTF_8);
@@ -90,6 +91,9 @@ public final class FpsBoost extends Module {
             o.particles().set(ParticleStatus.DECREASED);
         }
         o.enableVsync().set(false);
+        // Chunk updates fully on worker threads: no frame waits for a chunk to rebuild, so loading and block changes
+        // stop causing stutters.
+        o.prioritizeChunkUpdates().set(net.minecraft.client.PrioritizeChunkUpdates.NONE);
         o.save();
         SetupWizardScreen.applyPerformance(1);
         com.nightshade.util.EffectProbe.hit("FPS Boost");
@@ -114,6 +118,9 @@ public final class FpsBoost extends Module {
             o.biomeBlendRadius().set(s.get("biomeBlendRadius").getAsInt());
             o.particles().set(ParticleStatus.valueOf(s.get("particles").getAsString()));
             o.enableVsync().set(s.get("enableVsync").getAsBoolean());
+            if (s.has("prioritizeChunkUpdates")) {
+                o.prioritizeChunkUpdates().set(net.minecraft.client.PrioritizeChunkUpdates.valueOf(s.get("prioritizeChunkUpdates").getAsString()));
+            }
             o.save();
             Files.deleteIfExists(undoFile());
             com.nightshade.util.EffectProbe.hit("FPS Boost");

@@ -11,7 +11,9 @@ public final class Notification {
     private final String title;
     private final String message;
     private final Type type;
-    private final long createdMillis;
+    private long createdMillis;
+    private int count = 1;
+    private final Animation offset = new Animation(16f, -1f);
     private final long durationMillis;
     private final Animation slide = new Animation(14f, 0f);
 
@@ -38,6 +40,23 @@ public final class Notification {
 
     public Animation slide() {
         return slide;
+    }
+
+    /** Animated vertical position in the stack (-1 until first placed). */
+    public Animation offset() {
+        return offset;
+    }
+
+    /** How many identical toasts this one stands for ("x2"). */
+    public int count() {
+        return count;
+    }
+
+    /** The same toast was pushed again: count it and restart its timer instead of adding a copy. */
+    public void repeat() {
+        count++;
+        createdMillis = System.currentTimeMillis();
+        slide.setTarget(1f);
     }
 
     public boolean isExpired(long now) {

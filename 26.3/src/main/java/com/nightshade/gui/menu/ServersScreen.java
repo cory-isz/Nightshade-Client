@@ -67,6 +67,19 @@ public final class ServersScreen extends NsMenuScreen {
 
     private enum Tab { MINE, FEATURED }
 
+    private static final String[] SORTS = {"Your order", "Last played", "Name", "Players", "Ping"};
+    private static final String[] SUGGESTED_FOLDERS = {"PvP", "SMP", "Minigames", "Friends"};
+    private String folderFilter = "";
+    private int sortMode;
+    private final List<Object[]> chipRects = new ArrayList<>();
+
+    /** Last known status of every server pinged this session, so lists open already filled in. */
+    private record Snapshot(Component motd, long ping, int protocol, Component version, net.minecraft.network.protocol.status.ServerStatus.Players players,
+                            List<Component> playerList, ServerData.State state, byte[] icon, long time) {
+    }
+
+    private static final Map<String, Snapshot> CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Nullable
     private final Screen parent;
     private ServerList servers;
@@ -176,13 +189,23 @@ public final class ServersScreen extends NsMenuScreen {
     private List<ServerData> visible() {
         List<ServerData> source = tab == Tab.MINE ? mine() : featured;
         String q = search == null ? "" : search.getValue().trim().toLowerCase(Locale.ROOT);
-        if (q.isEmpty()) {
-            return source;
-        }
         List<ServerData> out = new ArrayList<>();
         for (ServerData s : source) {
-            if (s.name.toLowerCase(Locale.ROOT).contains(q) || s.ip.toLowerCase(Locale.ROOT).contains(q)) {
-                out.add(s);
+            if (!q.isEmpty() && !s.name.toLowerCase(Locale.ROOT).contains(q) && !s.ip.toLowerCase(Locale.ROOT).contains(q)) {
+                continue;
+            }
+            if (tab == Tab.MINE && !folderFilter.isEmpty() && !folderFilter.equalsIgnoreCase(com.nightshade.util.ServerMeta.folder(s.ip))) {
+                continue;
+            }
+            out.add(s);
+        }
+        if (tab == Tab.MINE) {
+            switch (sortMode) {
+                case 1 -> out.sort((a, b) -> Long.compare(com.nightshade.util.ServerMeta.lastJoined(b.ip), com.nightshade.util.ServerMeta.lastJoined(a.ip)));
+                case 2 -> out.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
+                case 3 -> out.sort((a, b) -> Integer.compare(b.players == null ? -1 : b.players.online(), a.players == null ? -1 : a.players.online()));
+                case 4 -> out.sort((a, b) -> Long.compare(a.ping < 0 ? Long.MAX_VALUE : a.ping, b.ping < 0 ? Long.MAX_VALUE : b.ping));
+                default -> { }
             }
         }
         return out;
@@ -208,15 +231,19 @@ public final class ServersScreen extends NsMenuScreen {
     /** Pings one server in the background; the result lands in {@code data} (MOTD, players, ping, state). */
     static void ping(ServerStatusPinger pinger, ServerData data) {
         net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-        data.setState(ServerData.State.PINGING);
-        data.motd = Component.literal("Pinging...");
-        data.ping = -1L;
-        data.playerList = List.of();
+        if (!applyCached(data)) {
+            data.setState(ServerData.State.PINGING);
+            data.motd = Component.literal("Pinging...");
+            data.ping = -1L;
+            data.playerList = List.of();
+        }
         PING_POOL.submit(() -> {
             try {
                 pinger.pingServer(data, () -> minecraft.execute(() -> { }), () -> {
                     data.setState(data.protocol == net.minecraft.SharedConstants.getCurrentVersion().protocolVersion()
                             ? ServerData.State.SUCCESSFUL : ServerData.State.INCOMPATIBLE);
+                    CACHE.put(cacheKey(data), new Snapshot(data.motd, data.ping, data.protocol, data.version, data.players,
+                            data.playerList, data.state(), data.getIconBytes(), System.currentTimeMillis()));
                 }, EventLoopGroupHolder.remote(minecraft.options.useNativeTransport()));
             } catch (Exception e) {
                 data.setState(ServerData.State.UNREACHABLE);
@@ -224,6 +251,29 @@ public final class ServersScreen extends NsMenuScreen {
                 data.motd = Component.literal("Can't connect to server");
             }
         });
+    }
+
+    private static String cacheKey(ServerData data) {
+        return data.ip == null ? "" : data.ip.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /** Fills in the last known status (from the last 2 minutes) so the row shows it while a fresh ping runs. */
+    private static boolean applyCached(ServerData data) {
+        Snapshot snap = CACHE.get(cacheKey(data));
+        if (snap == null || System.currentTimeMillis() - snap.time() > 120_000L) {
+            return false;
+        }
+        data.motd = snap.motd();
+        data.ping = snap.ping();
+        data.protocol = snap.protocol();
+        data.version = snap.version();
+        data.players = snap.players();
+        data.playerList = snap.playerList();
+        data.setState(snap.state());
+        if (snap.icon() != null && data.getIconBytes() == null) {
+            data.setIconBytes(snap.icon());
+        }
+        return true;
     }
 
     /** Short live status for a server row: "1,234 online  ·  42 ms", or null while pinging / offline. */
@@ -388,6 +438,27 @@ public final class ServersScreen extends NsMenuScreen {
         NightshadeClient.client().notifications().info("Profiles", next == null ? s.name + ": no profile" : "'" + next + "' loads when you join " + s.name);
     }
 
+    /** Next folder for a server: none -> each folder in use and the suggested ones -> none. */
+    private void cycleFolder(ServerData s) {
+        java.util.List<String> options = new ArrayList<>(com.nightshade.util.ServerMeta.folders());
+        for (String f : SUGGESTED_FOLDERS) {
+            if (options.stream().noneMatch(f::equalsIgnoreCase)) {
+                options.add(f);
+            }
+        }
+        String current = com.nightshade.util.ServerMeta.folder(s.ip);
+        int index = -1;
+        for (int i = 0; i < options.size(); i++) {
+            if (options.get(i).equalsIgnoreCase(current)) {
+                index = i;
+            }
+        }
+        String next = index + 1 < options.size() ? options.get(index + 1) : "";
+        com.nightshade.util.ServerMeta.setFolder(s.ip, next);
+        NightshadeClient.client().notifications().info("Multiplayer", next.isEmpty() ? s.name + ": no folder" : s.name + " moved to " + next);
+        openMenu(s, menuX, menuY); // keep the menu open so you can click again
+    }
+
     private void openMenu(ServerData s, int x, int y) {
         menu.clear();
         menu.add(new MenuItem("Join", Theme.TEXT, () -> join(s)));
@@ -400,6 +471,8 @@ public final class ServersScreen extends NsMenuScreen {
                 String linked = NightshadeClient.client().profiles().profileForServer(s.ip);
                 menu.add(new MenuItem(linked == null ? "Profile: none" : "Profile: " + linked, Theme.TEXT, () -> cycleProfile(s)));
             }
+            String folder = com.nightshade.util.ServerMeta.folder(s.ip);
+            menu.add(new MenuItem(folder.isEmpty() ? "Folder: none" : "Folder: " + folder, Theme.TEXT, () -> cycleFolder(s)));
             menu.add(new MenuItem("Remove", 0xFFFF6B81, () -> delete(s)));
         } else {
             menu.add(new MenuItem("Add to my servers", Theme.TEXT, () -> addFeatured(s)));
@@ -568,6 +641,38 @@ public final class ServersScreen extends NsMenuScreen {
         Fonts.draw(ctx, section, cx1 + 2, HEADER_H + 6, Theme.TEXT, false);
         if (tab == Tab.FEATURED) {
             Fonts.draw(ctx, "Popular servers, with live status", cx1 + 6 + Fonts.width(section), HEADER_H + 6, Theme.TEXT_DIM, false);
+        }
+        chipRects.clear();
+        if (tab == Tab.MINE) {
+            // sort chip on the right, folder chips after the title
+            String sortLabel = "Sort: " + SORTS[sortMode];
+            int sw = Fonts.width(sortLabel) + 12;
+            int sx = cx2 - sw;
+            boolean sh = RenderUtil.isHovered(mouseX, mouseY, sx, HEADER_H + 3, cx2, HEADER_H + 16);
+            RenderUtil.roundedRect(ctx, sx, HEADER_H + 3, cx2, HEADER_H + 16, 6, sh ? 0x40FFFFFF : 0x22FFFFFF);
+            Fonts.draw(ctx, sortLabel, sx + 6, HEADER_H + 5, Theme.TEXT, false);
+            chipRects.add(new Object[]{new int[]{sx, HEADER_H + 3, cx2, HEADER_H + 16}, "#sort"});
+            java.util.List<String> folders = com.nightshade.util.ServerMeta.folders();
+            if (!folders.isEmpty()) {
+                int fx = cx1 + 10 + Fonts.width(section);
+                java.util.List<String> chips = new ArrayList<>();
+                chips.add("");
+                chips.addAll(folders);
+                for (String f : chips) {
+                    String label = f.isEmpty() ? "All" : f;
+                    int fw = Fonts.width(label) + 12;
+                    if (fx + fw > sx - 6) {
+                        break;
+                    }
+                    boolean active = folderFilter.equalsIgnoreCase(f);
+                    boolean fh = RenderUtil.isHovered(mouseX, mouseY, fx, HEADER_H + 3, fx + fw, HEADER_H + 16);
+                    RenderUtil.roundedRect(ctx, fx, HEADER_H + 3, fx + fw, HEADER_H + 16, 6,
+                            active ? ColorUtil.withAlpha(accent, 0xB0) : fh ? 0x40FFFFFF : 0x1AFFFFFF);
+                    Fonts.draw(ctx, label, fx + 6, HEADER_H + 5, active ? 0xFFFFFFFF : Theme.TEXT_MUTED, false);
+                    chipRects.add(new Object[]{new int[]{fx, HEADER_H + 3, fx + fw, HEADER_H + 16}, f});
+                    fx += fw + 4;
+                }
+            }
         }
         int total = list.size() * (CARD_H + GAP);
         double max = Math.max(0, total - (listBottom - listTop));
@@ -783,6 +888,20 @@ public final class ServersScreen extends NsMenuScreen {
             return super.onMouseClicked(mouseX, mouseY, button) || true;
         }
         search.setFocused(false);
+        double chipY = mouseY - Math.round((1f - appear()) * 10f);
+        for (Object[] chip : List.copyOf(chipRects)) {
+            int[] r = (int[]) chip[0];
+            if (RenderUtil.isHovered(mouseX, chipY, r[0], r[1], r[2], r[3])) {
+                String id = (String) chip[1];
+                if (id.equals("#sort")) {
+                    sortMode = (sortMode + 1) % SORTS.length;
+                } else {
+                    folderFilter = id;
+                }
+                scrollTarget = 0;
+                return true;
+            }
+        }
         for (int i = 0; i < 2; i++) {
             int[] r = tabRects[i];
             if (r != null && RenderUtil.isHovered(mouseX, mouseY, r[0], r[1], r[2], r[3])) {
@@ -912,6 +1031,19 @@ public final class ServersScreen extends NsMenuScreen {
     public void menuForTest(int index) {
         selected = servers.get(index);
         openMenu(selected, width / 2, height / 2);
+    }
+
+    public void folderForTest(int index, String folder) {
+        com.nightshade.util.ServerMeta.setFolder(servers.get(index).ip, folder);
+        folderFilter = folder;
+    }
+
+    public int visibleCountForTest() {
+        return visible().size();
+    }
+
+    public void sortForTest(int mode) {
+        sortMode = mode;
     }
 
     public int menuSizeForTest() {

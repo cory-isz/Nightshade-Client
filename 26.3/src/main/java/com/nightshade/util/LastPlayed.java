@@ -67,6 +67,7 @@ public final class LastPlayed {
             } else {
                 ServerData data = mc.getCurrentServer();
                 if (data != null && data.ip != null && !data.ip.isBlank()) {
+                    ServerMeta.recordJoin(data.ip);
                     entry = new Entry(Kind.SERVER, data.ip, data.name == null || data.name.isBlank() ? data.ip : data.name, System.currentTimeMillis());
                 }
             }

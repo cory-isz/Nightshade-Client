@@ -190,7 +190,7 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
             servers.addAll(all.subList(0, Math.min(MAX_ROWS, all.size())));
             if (!serversPinged) {
                 serversPinged = true; // live player counts and ping for the recent servers
-                servers.forEach(s -> ServersScreen.ping(pinger, s));
+                all.forEach(s -> ServersScreen.ping(pinger, s)); // every saved server, so Multiplayer opens already filled in
             }
         } catch (Exception e) {
             serverTotal = 0;

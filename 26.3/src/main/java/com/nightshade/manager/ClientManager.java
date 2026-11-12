@@ -111,7 +111,10 @@ public final class ClientManager {
         LevelRenderEvents.COLLECT_SUBMITS.register(context -> events.post(worldRenderEvent.set(context)));
         LevelRenderEvents.BEFORE_BLOCK_OUTLINE.register((context, outline) ->
                 !events.hasListeners(BlockOutlineEvent.class) || !events.post(new BlockOutlineEvent(context, outline)).isCancelled());
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(() -> com.nightshade.util.LastPlayed.recordJoin(client)));
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(() -> {
+            com.nightshade.util.LastPlayed.recordJoin(client);
+            com.nightshade.module.interfaces.ServerTips.onJoin();
+        }));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(() -> {
             cps.reset();
             events.post(new WorldChangeEvent(null));
@@ -122,6 +125,7 @@ public final class ClientManager {
         });
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> shutdown());
         TitleScreenBadge.register();
+        com.nightshade.gui.ScreenTransitions.register();
     }
 
     private void onListenerError(Object owner, Throwable throwable) {

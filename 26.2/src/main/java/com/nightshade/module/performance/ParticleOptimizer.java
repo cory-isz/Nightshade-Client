@@ -23,6 +23,7 @@ public final class ParticleOptimizer extends Module {
             .visibleWhen(() -> mode.is("Reduce"));
     private final BooleanSetting keepBlockBreak = add(new BooleanSetting("Keep Block Breaking", "Always keep block-breaking particles for feedback", true));
     private final NumberSetting maxDistance = add(new NumberSetting("Max Distance", "Particles further away than this are not spawned", 24, 8, 32, 2, " blocks"));
+    private final BooleanSetting farPhysics = add(new BooleanSetting("Skip Far Collisions", "Particles further than 12 blocks stop checking for blocks to bounce off (you can't see the difference)", true));
     private final BooleanSetting behind = add(new BooleanSetting("Skip Behind You", "Don't spawn particles behind you (more than 4 blocks back, in first person)", true));
     private int counter;
 
@@ -90,5 +91,26 @@ public final class ParticleOptimizer extends Module {
     /** Total particles skipped since launch (displayed by Frame Stats for measurement). */
     public static long skippedTotal() {
         return SKIPPED.get();
+    }
+
+    private static final AtomicLong PHYSICS_SKIPPED = new AtomicLong();
+
+    public static long physicsSkippedTotal() {
+        return PHYSICS_SKIPPED.get();
+    }
+
+    /** Hook from ParticleMixin: true when a particle at this position may move without block collisions. */
+    public static boolean skipPhysics(double x, double y, double z) {
+        ParticleOptimizer module = active;
+        if (module == null || !module.farPhysics.get()) {
+            return false;
+        }
+        var camera = mc.gameRenderer.mainCamera().position();
+        double dx = x - camera.x, dy = y - camera.y, dz = z - camera.z;
+        if (dx * dx + dy * dy + dz * dz > 12 * 12) {
+            PHYSICS_SKIPPED.incrementAndGet();
+            return true;
+        }
+        return false;
     }
 }
