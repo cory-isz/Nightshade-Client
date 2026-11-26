@@ -23,6 +23,7 @@ public final class CoordinatesHud extends HudModule {
     private int lineCount;
     private int width = 60;
     private BlockPos lastBlockPos = BlockPos.ZERO;
+    private Object lastLevel;
 
     public CoordinatesHud() {
         super("Coordinates", "Shows your position, facing direction and biome", ModuleCategory.HUD, 0.0, 0.215);
@@ -46,7 +47,8 @@ public final class CoordinatesHud extends HudModule {
         }
         if (showBiome.get() && mc.level != null) {
             BlockPos pos = mc.player.blockPosition();
-            if (!pos.equals(lastBlockPos) || lines[2] == null) {
+            if (!pos.equals(lastBlockPos) || lines[2] == null || lastLevel != mc.level) {
+                lastLevel = mc.level;
                 lastBlockPos = pos.immutable();
                 Holder<Biome> biome = mc.level.getBiome(pos);
                 lines[2] = biome.unwrapKey().map(key -> prettify(key.identifier().getPath())).orElse("Unknown");

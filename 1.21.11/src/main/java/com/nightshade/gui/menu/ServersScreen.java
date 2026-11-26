@@ -562,7 +562,10 @@ public final class ServersScreen extends NsMenuScreen {
                 onlineCount++;
             }
         }
-        Fonts.draw(ctx, servers.size() + (servers.size() == 1 ? " server" : " servers") + "  ·  " + onlineCount + " online", 42, 22, Theme.TEXT_DIM, false);
+        String count = servers.size() + (servers.size() == 1 ? " server" : " servers");
+        int room = tabsLeft() - 10 - 42; // keep clear of the tabs
+        String full = count + "  ·  " + onlineCount + " online";
+        Fonts.draw(ctx, Fonts.width(full) <= room ? full : Fonts.trim(count, Math.max(0, room)), 42, 22, Theme.TEXT_DIM, false);
         renderTabs(ctx, mx, my, accent);
         boolean sf = search.isFocused();
         boolean sh = RenderUtil.isHovered(mx, my, searchX1, 9, searchX2, 29);
@@ -605,6 +608,12 @@ public final class ServersScreen extends NsMenuScreen {
         if (tooltip != null && !menuOpen) {
             GuiDraw.tooltip(ctx, tooltip, mouseX, mouseY, width, height);
         }
+    }
+
+    /** Left edge of the tab row (the tabs are centred). */
+    private int tabsLeft() {
+        int total = Fonts.width("My servers  " + servers.size()) + Fonts.width("Featured") + 28;
+        return width / 2 - total / 2 - 6;
     }
 
     private void renderTabs(GuiGraphics ctx, int mx, int my, int accent) {

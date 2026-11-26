@@ -45,6 +45,7 @@ public final class TargetHud extends HudModule {
                     bar.snap(living.getHealth() / Math.max(1f, living.getMaxHealth()));
                     hitsGiven = 0;
                     hitsTaken = 0;
+                    lastDamage = 0f; // don't show the previous target's last hit
                 }
                 target = living;
                 healthBefore = living.getHealth();
@@ -145,7 +146,7 @@ public final class TargetHud extends HudModule {
             for (net.minecraft.world.entity.EquipmentSlot slot : ARMOR) {
                 net.minecraft.world.item.ItemStack piece = target.getItemBySlot(slot);
                 if (!piece.isEmpty()) {
-                    if (piece.isDamageableItem() && piece.getMaxDamage() > 0
+                    if (armourWarning.get() && piece.isDamageableItem() && piece.getMaxDamage() > 0
                             && 1f - piece.getDamageValue() / (float) piece.getMaxDamage() < breakAt.floatValue() / 100f) {
                         // nearly broken: red tile behind it
                         RenderUtil.roundedRect(context, ix - 1, -1, ix + 17, 17, 3, 0xA0FF3B5C);
@@ -158,7 +159,7 @@ public final class TargetHud extends HudModule {
             context.pose().popMatrix();
             if (breaking && armourWarning.get()) {
                 int tx = gx + Math.round(ix * 0.75f) + 4;
-                Fonts.draw(context, "Armour breaking", tx, 38, Theme.DANGER, shadow());
+                Fonts.draw(context, Fonts.trim("Armour breaking", Math.max(8, w - tx - 4)), tx, 38, Theme.DANGER, shadow());
             }
         }
     }

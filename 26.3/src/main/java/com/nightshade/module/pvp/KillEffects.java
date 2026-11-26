@@ -88,6 +88,8 @@ public final class KillEffects extends Module {
         }
         played++;
         EffectProbe.hit("Kill Effects");
+        com.nightshade.cosmetic.PetMood.cheer();
+        com.nightshade.cosmetic.PetMood.cheer();
     }
 
     private void burst(ParticleOptions particle, LivingEntity target, int count, double speed) {

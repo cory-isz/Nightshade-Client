@@ -95,6 +95,7 @@ public final class ClientManager {
             tickNanos += System.nanoTime() - tickStart;
             ticks++;
             config.tick();
+            com.nightshade.cosmetic.Wardrobe.tick(client);
         });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("nightshade", "hud"), (context, tickCounter) -> {
             frameTimes.onFrame();

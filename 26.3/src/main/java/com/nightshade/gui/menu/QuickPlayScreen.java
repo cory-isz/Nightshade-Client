@@ -76,6 +76,19 @@ public final class QuickPlayScreen extends NsMenuScreen {
         minecraft.gui.setScreen(parent);
     }
 
+    /** Bottom of the last button row when laid out with this many columns. */
+    private static int contentBottom(int cols) {
+        int y = 46;
+        for (int s = 0; s < SECTIONS.length; s++) {
+            if (s > 0) {
+                y += 22;
+            }
+            y += 13;
+            y += ((SECTIONS[s].modes().length + cols - 1) / cols - 1) * 22;
+        }
+        return y + 18;
+    }
+
     private int x1() {
         return (width - Math.min(width - 32, 560)) / 2;
     }
@@ -97,6 +110,9 @@ public final class QuickPlayScreen extends NsMenuScreen {
                 x1 + 30, 22, on ? Theme.TEXT_DIM : Theme.WARNING, false);
         int y = 46;
         int cols = 4;
+        while (cols < 6 && contentBottom(cols) > height - 32) {
+            cols++; // short window: more, narrower buttons per row so nothing goes under the footer
+        }
         int gap = 6;
         int bw = (x2 - x1 - gap * (cols - 1)) / cols;
         Section current = null;

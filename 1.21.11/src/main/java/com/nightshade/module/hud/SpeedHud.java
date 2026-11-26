@@ -56,6 +56,8 @@ public final class SpeedHud extends HudModule {
     @Override
     protected void onDisable() {
         lastX = Double.NaN;
+        java.util.Arrays.fill(samples, 0);
+        speed = 0;
     }
 
     @Override

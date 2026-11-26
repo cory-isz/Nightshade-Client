@@ -53,8 +53,13 @@
     "EntityShadowMixin",
     "FontUniversalMixin",
     "AvatarCosmeticsMixin",
+    "PlayerModelEmoteMixin",
     "PanoramaSpinMixin",
     "TabListNickMixin",
+    "AvatarRendererLayerMixin",
+    "ChatOwnerCommandMixin",
+    "accessor.LivingEntityRendererAccess",
+    "SingleQuadParticleMixin",
     "ClientLevelWeatherMixin"
   ],
   "injectors": {

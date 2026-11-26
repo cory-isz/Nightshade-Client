@@ -235,10 +235,14 @@ public final class CrosshairEditorScreen extends NsMenuScreen {
         int rx2 = px2 - 14;
         int rw = rx2 - rx1;
         int y = py1 + 40;
-        Fonts.draw(ctx, "Preview", rx1, y, Theme.TEXT_MUTED, false);
-        y += 11;
+        int avail = (py2 - 30) - y;
+        boolean tight = avail < 207; // short window: smaller previews and presets so nothing runs into the footer
+        if (!tight) {
+            Fonts.draw(ctx, "Preview", rx1, y, Theme.TEXT_MUTED, false);
+            y += 11;
+        }
         int tileW = (rw - 8) / 3;
-        int tileH = 54;
+        int tileH = tight ? Math.max(22, Math.min(54, avail - 74 - 2 * 19)) : 54;
         for (int i = 0; i < BACKDROPS.length; i++) {
             int x = rx1 + i * (tileW + 4);
             RenderUtil.roundedRect(ctx, x, y, x + tileW, y + tileH, 4, 0xFF000000);
@@ -252,6 +256,9 @@ public final class CrosshairEditorScreen extends NsMenuScreen {
         int cols = 6;
         int pw = (rw - (cols - 1) * 4) / cols;
         int ph = Math.min(pw, 34);
+        if (tight) {
+            ph = Math.max(15, Math.min(ph, (avail - 74 - tileH) / 2));
+        }
         int i = 0;
         for (Map.Entry<String, CrosshairPattern> preset : CrosshairPattern.PRESETS.entrySet()) {
             int x = rx1 + (i % cols) * (pw + 4);
@@ -294,7 +301,7 @@ public final class CrosshairEditorScreen extends NsMenuScreen {
         paste.render(ctx, px1 + 14 + 84, fy, 80, 17, mouseX, mouseY);
         done.render(ctx, px2 - 14 - 80, fy, 80, 17, mouseX, mouseY);
         if (System.currentTimeMillis() < statusUntil) {
-            Fonts.draw(ctx, status, px1 + 14 + 172, fy + 5, Theme.accentLight(), false);
+            Fonts.draw(ctx, Fonts.trim(status, Math.max(0, px2 - 14 - 80 - 6 - (px1 + 14 + 172))), px1 + 14 + 172, fy + 5, Theme.accentLight(), false);
         } else {
             Fonts.draw(ctx, pattern.count() + " pixels", px1 + 14 + 172, fy + 5, Theme.TEXT_DIM, false);
         }

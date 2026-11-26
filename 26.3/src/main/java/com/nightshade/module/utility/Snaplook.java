@@ -10,6 +10,7 @@ import net.minecraft.client.CameraType;
 /** Snaplook: hold the key to look at yourself from the front (or back); let go to return to your view. */
 public final class Snaplook extends Module {
     private final ModeSetting view = add(new ModeSetting("View", "Camera while held", "Front", "Front", "Back"));
+    private static volatile Snaplook active;
     private CameraType previous;
 
     public Snaplook() {
@@ -24,14 +25,27 @@ public final class Snaplook extends Module {
         }
         previous = mc.options.getCameraType();
         mc.options.setCameraType(view.is("Front") ? CameraType.THIRD_PERSON_FRONT : CameraType.THIRD_PERSON_BACK);
+        active = this;
         EffectProbe.hit("Snaplook");
     }
 
     @Override
     protected void onDisable() {
-        if (previous != null && mc.options != null) {
-            mc.options.setCameraType(previous);
-        }
+        active = null;
+        CameraType back = previous;
         previous = null;
+        if (back != null && mc.options != null && !Freelook.takePrevious(back)) {
+            mc.options.setCameraType(back);
+        }
+    }
+
+    /** Freelook was released while Snaplook is held: Snaplook restores Freelook's saved view later. */
+    static boolean takePrevious(CameraType view) {
+        Snaplook module = active;
+        if (module == null || module.previous == null) {
+            return false;
+        }
+        module.previous = view;
+        return true;
     }
 }

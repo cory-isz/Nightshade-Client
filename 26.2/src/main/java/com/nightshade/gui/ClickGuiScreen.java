@@ -78,6 +78,7 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
     private int closeX;
     private int hudX;
     private int keysX;
+    private int modsX;
 
     @Nullable
     private final Screen parent;
@@ -438,11 +439,13 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
         saveX = mainX2 - saveW;
         hudX = saveX - buttonWidth("Edit HUD") - 5;
         keysX = hudX - buttonWidth("Keybinds") - 5;
+        modsX = keysX - buttonWidth("Mods") - 5;
         boolean free = binding == null;
+        button(ctx, modsX, footerY, "Mods", false, free && RenderUtil.isHovered(mouseX, mouseY, modsX, footerY, modsX + buttonWidth("Mods"), footerY + 15));
         button(ctx, keysX, footerY, "Keybinds", false, free && RenderUtil.isHovered(mouseX, mouseY, keysX, footerY, keysX + buttonWidth("Keybinds"), footerY + 15));
         button(ctx, hudX, footerY, "Edit HUD", false, free && RenderUtil.isHovered(mouseX, mouseY, hudX, footerY, hudX + buttonWidth("Edit HUD"), footerY + 15));
         button(ctx, saveX, footerY, "Save", true, free && RenderUtil.isHovered(mouseX, mouseY, saveX, footerY, saveX + saveW, footerY + 15));
-        int statusMax = keysX - mainX1 - 10;
+        int statusMax = modsX - mainX1 - 10;
         Fonts.draw(ctx, Fonts.trim(status, statusMax), mainX1, footerY + 4, binding != null ? Theme.accentLight() : Theme.TEXT_DIM, false);
     }
 
@@ -487,6 +490,12 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
         if (button == 0 && RenderUtil.isHovered(mouseX, mouseY, saveX, footerY, saveX + buttonWidth("Save"), footerY + 15)) {
             manager.config().saveAll();
             manager.notifications().success("Configuration", "Saved to " + manager.config().getRoot().getFileName());
+            return true;
+        }
+        if (button == 0 && RenderUtil.isHovered(mouseX, mouseY, modsX, footerY, modsX + buttonWidth("Mods"), footerY + 15)) {
+            if (this.minecraft != null) { // every installed mod and its settings, one click away
+                this.minecraft.gui.setScreen(new com.nightshade.gui.mods.ModManagerScreen(this));
+            }
             return true;
         }
         if (button == 0 && RenderUtil.isHovered(mouseX, mouseY, keysX, footerY, keysX + buttonWidth("Keybinds"), footerY + 15)) {
@@ -612,6 +621,7 @@ public final class ClickGuiScreen extends com.nightshade.gui.menu.NsMenuScreen {
             }
             return true;
         }
+        com.nightshade.gui.settings.SettingComponent.modifiers = modifiers;
         if (settings != null && settings.keyPressed(keyCode)) {
             return true;
         }

@@ -23,6 +23,13 @@ public abstract class AvatarCosmeticsMixin {
         if (mc.player == null || state.id != mc.player.getId() || state.skin == null) {
             return;
         }
+        if (com.nightshade.cosmetic.CosmeticLayer.applies(state)) {
+            String worn = com.nightshade.cosmetic.Wardrobe.equipped(com.nightshade.cosmetic.Catalog.Category.CAPES);
+            if (worn != null && worn.startsWith("cape_")) {
+                state.showCape = false; // the 3D cape replaces the flat one
+                return;
+            }
+        }
         ClientAsset.Texture cape = Cosmetics.cape(state.skin.cape());
         if (cape == null) {
             return;

@@ -127,7 +127,7 @@ public final class HitFeedback extends HudModule {
 
     @Override
     public boolean shouldRender() {
-        return mc.player != null && (hits > 0 || System.currentTimeMillis() - shownAt < 900);
+        return mc.player != null && ((stats.get() && hits > 0) || System.currentTimeMillis() - shownAt < 900);
     }
 
     @Override

@@ -15,6 +15,6 @@ public abstract class TabListNickMixin {
     /** Target: public Component getNameForDisplay(PlayerInfo). */
     @Inject(method = "getNameForDisplay", at = @At("RETURN"), cancellable = true)
     private void nightshade$nick(PlayerInfo info, CallbackInfoReturnable<Component> cir) {
-        cir.setReturnValue(NickHider.tab(cir.getReturnValue()));
+        cir.setReturnValue(com.nightshade.cosmetic.Badges.decorate(info.getProfile().id(), NickHider.tab(cir.getReturnValue())));
     }
 }

@@ -60,6 +60,29 @@ public final class TextComponent extends SettingComponent<TextSetting> {
         return isHovered(mouseX, mouseY);
     }
 
+    private void paste() {
+        String clip = net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard();
+        if (clip == null) {
+            return;
+        }
+        StringBuilder out = new StringBuilder(text);
+        for (char c : clip.toCharArray()) {
+            if (out.length() >= setting.maxLength()) {
+                break;
+            }
+            if (!Character.isISOControl(c) && c != '§') {
+                out.append(c);
+            }
+        }
+        text = out.toString();
+    }
+
+    /** Test hook: focus the field as if it was clicked. */
+    public void focusForTest() {
+        focused = true;
+        text = setting.get();
+    }
+
     private void commit() {
         focused = false;
         setting.set(text);
@@ -79,6 +102,9 @@ public final class TextComponent extends SettingComponent<TextSetting> {
             case com.mojang.blaze3d.platform.InputConstants.KEY_RETURN, com.mojang.blaze3d.platform.InputConstants.KEY_NUMPADENTER -> commit();
             case com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE -> focused = false;
             default -> {
+                if (key == com.mojang.blaze3d.platform.InputConstants.KEY_V && (modifiers & com.mojang.blaze3d.platform.InputConstants.MOD_CONTROL) != 0) {
+                    paste(); // Ctrl+V (Cmd+V on Mac)
+                }
             }
         }
         return true;

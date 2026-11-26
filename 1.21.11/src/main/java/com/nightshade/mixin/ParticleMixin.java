@@ -4,12 +4,26 @@ import com.nightshade.module.performance.ParticleOptimizer;
 import net.minecraft.client.particle.Particle;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Particle.class)
-public abstract class ParticleMixin {
+public abstract class ParticleMixin implements com.nightshade.render.ParticleScaled {
+    @Unique
+    private float nightshade$scale = 1f;
+
+    @Override
+    public float nightshade$scale() {
+        return nightshade$scale;
+    }
+
+    @Override
+    public void nightshade$setScale(float scale) {
+        nightshade$scale = scale;
+    }
+
     @Shadow
     protected double x;
     @Shadow

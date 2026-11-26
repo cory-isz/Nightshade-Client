@@ -61,6 +61,29 @@ public final class TextComponent extends SettingComponent<TextSetting> {
         return isHovered(mouseX, mouseY);
     }
 
+    private void paste() {
+        String clip = net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard();
+        if (clip == null) {
+            return;
+        }
+        StringBuilder out = new StringBuilder(text);
+        for (char c : clip.toCharArray()) {
+            if (out.length() >= setting.maxLength()) {
+                break;
+            }
+            if (!Character.isISOControl(c) && c != '§') {
+                out.append(c);
+            }
+        }
+        text = out.toString();
+    }
+
+    /** Test hook: focus the field as if it was clicked. */
+    public void focusForTest() {
+        focused = true;
+        text = setting.get();
+    }
+
     private void commit() {
         focused = false;
         setting.set(text);
@@ -80,6 +103,9 @@ public final class TextComponent extends SettingComponent<TextSetting> {
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> commit();
             case GLFW.GLFW_KEY_ESCAPE -> focused = false;
             default -> {
+                if (key == GLFW.GLFW_KEY_V && (modifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0) {
+                    paste(); // Ctrl+V (Cmd+V on Mac)
+                }
             }
         }
         return true;

@@ -242,6 +242,10 @@ public final class SetupWizardScreen extends NsMenuScreen {
         int gap = 10;
         int cw = (x2 - x1 - gap * (n - 1)) / n;
         int ch = Math.min(bottom - top, 150);
+        boolean compact = ch < 140;
+        int titleY = compact ? 9 : 22;
+        int lineY = compact ? 25 : 42;
+        int descY = compact ? 32 : 56;
         for (int i = 0; i < n; i++) {
             int x = x1 + i * (cw + gap);
             optionRects[i] = new int[]{x, top, x + cw, top + ch};
@@ -254,17 +258,30 @@ public final class SetupWizardScreen extends NsMenuScreen {
             RenderUtil.roundedOutline(ctx, x, top, x + cw, top + ch, 8, sel ? Theme.accentLight() : hov ? ColorUtil.withAlpha(Theme.accent(), 0x90) : 0x1CFFFFFF);
             // title, larger, with a short accent line under it
             ctx.pose().pushMatrix();
-            ctx.pose().translate(x + cw / 2f, top + 22);
+            ctx.pose().translate(x + cw / 2f, top + titleY);
             ctx.pose().scale(1.5f, 1.5f);
             Fonts.drawCentered(ctx, choices[i].title(), 0, 0, sel ? 0xFFFFFFFF : Theme.TEXT, false);
             ctx.pose().popMatrix();
-            RenderUtil.roundedRect(ctx, x + cw / 2 - 12, top + 42, x + cw / 2 + 12, top + 44, 1,
+            RenderUtil.roundedRect(ctx, x + cw / 2 - 12, top + lineY, x + cw / 2 + 12, top + lineY + 2, 1,
                     sel ? Theme.accentLight() : ColorUtil.withAlpha(Theme.accent(), 0x70));
-            int ly = top + 56;
-            for (FormattedCharSequence line : font.split(Fonts.text(choices[i].description()), cw - 16)) {
-                ctx.text(font, line, x + cw / 2 - font.width(line) / 2, ly, Theme.TEXT_MUTED, false);
+            int room = ch - descY - 4 - (choices == PERFORMANCE && i == 1 ? 20 : 0);
+            float ds = 1f;
+            java.util.List<FormattedCharSequence> lines = font.split(Fonts.text(choices[i].description()), cw - 16);
+            if (lines.size() * (Fonts.height() + 2) > room) {
+                ds = 0.8f; // short window: smaller text so the description stays inside its card
+                lines = font.split(Fonts.text(choices[i].description()), (int) ((cw - 12) / ds));
+            }
+            int maxLines = Math.max(1, (int) (room / ((Fonts.height() + 2) * ds)));
+            ctx.pose().pushMatrix();
+            ctx.pose().translate(x + cw / 2f, top + descY);
+            ctx.pose().scale(ds, ds);
+            int ly = 0;
+            for (int li = 0; li < lines.size() && li < maxLines; li++) {
+                FormattedCharSequence line = lines.get(li);
+                ctx.text(font, line, -font.width(line) / 2, ly, Theme.TEXT_MUTED, false);
                 ly += Fonts.height() + 2;
             }
+            ctx.pose().popMatrix();
             if (choices == PERFORMANCE && i == 1) {
                 RenderUtil.roundedRect(ctx, x + cw / 2 - 34, top + ch - 18, x + cw / 2 + 34, top + ch - 6, 4, ColorUtil.withAlpha(Theme.SUCCESS, 0x40));
                 Fonts.drawCentered(ctx, "Recommended", x + cw / 2, top + ch - 16, Theme.SUCCESS, false);

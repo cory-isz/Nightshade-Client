@@ -70,9 +70,14 @@ public final class NickHider extends Module {
         if (in == null || real == null || real.isEmpty() || nick.isEmpty() || !in.getString().contains(real)) {
             return in;
         }
+        java.util.regex.Pattern word = java.util.regex.Pattern.compile("(?<![A-Za-z0-9_])" + java.util.regex.Pattern.quote(real) + "(?![A-Za-z0-9_])");
+        if (!word.matcher(in.getString()).find()) {
+            return in;
+        }
+        String safeNick = java.util.regex.Matcher.quoteReplacement(nick);
         MutableComponent out = Component.empty();
         in.visit((Style style, String text) -> {
-            out.append(Component.literal(text.replace(real, nick)).withStyle(style));
+            out.append(Component.literal(word.matcher(text).replaceAll(safeNick)).withStyle(style));
             return Optional.empty();
         }, Style.EMPTY);
         EffectProbe.hit("Nick Hider");

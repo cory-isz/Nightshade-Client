@@ -131,6 +131,20 @@ public final class WaypointManager {
         return waypoint;
     }
 
+    /** Replaces the waypoint with this name in the current world (any dimension) by one at the given spot. */
+    @Nullable
+    public Waypoint replaceNamed(String name, int x, int y, int z, String dimension, int color) {
+        if (currentWorldKey() == null) {
+            return null;
+        }
+        List<Waypoint> list = current();
+        list.removeIf(w -> w.name().equals(name));
+        Waypoint waypoint = new Waypoint(name, x, y, z, dimension, color);
+        list.add(waypoint);
+        save();
+        return waypoint;
+    }
+
     public void remove(Waypoint waypoint) {
         current().remove(waypoint);
         save();

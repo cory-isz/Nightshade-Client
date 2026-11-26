@@ -69,6 +69,7 @@ public final class ModuleRegistry {
         manager.register(new CpsHud());
         manager.register(new com.nightshade.module.hud.MinimapHud());
         manager.register(new com.nightshade.module.utility.WorldMap());
+        manager.register(new com.nightshade.module.visual.EmoteWheel());
         manager.register(new com.nightshade.module.utility.DiscordPresence());
         manager.register(new com.nightshade.module.hud.SpotifyHud());
         manager.register(new com.nightshade.module.utility.MediaKeys.PlayPause());
@@ -81,6 +82,7 @@ public final class ModuleRegistry {
         manager.register(new com.nightshade.module.utility.HypixelTools.QuickPlay());
         manager.register(new com.nightshade.module.utility.HypixelTools.AutoTip());
         manager.register(new CoordinatesHud());
+        manager.register(new com.nightshade.module.hud.LastDeathHud());
         manager.register(new ModuleListHud());
         manager.register(new PotionEffectsHud());
         manager.register(new CompassHud());
@@ -88,6 +90,8 @@ public final class ModuleRegistry {
         manager.register(new ClockHud());
         manager.register(new ServerAddressHud());
         manager.register(new ComboCounterHud());
+        manager.register(new com.nightshade.module.hud.ComboTrainerHud());
+        manager.register(new com.nightshade.module.pvp.SessionRecap());
         manager.register(new TargetHud());
         manager.register(new MemoryHud());
         manager.register(new com.nightshade.module.hud.SpeedHud());
@@ -99,6 +103,7 @@ public final class ModuleRegistry {
         manager.register(new com.nightshade.module.hud.PackDisplayHud());
         manager.register(new com.nightshade.module.visual.TntCountdown());
         manager.register(new com.nightshade.module.pvp.HitParticles());
+        manager.register(new com.nightshade.module.visual.Particles());
         manager.register(new com.nightshade.module.utility.FightReplay());
         manager.register(new com.nightshade.module.utility.SaveReplay());
         manager.register(new com.nightshade.module.hud.BiomeHud());

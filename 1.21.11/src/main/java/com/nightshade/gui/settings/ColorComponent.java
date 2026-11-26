@@ -211,6 +211,12 @@ public final class ColorComponent extends SettingComponent<ColorSetting> {
                 hexText = setting.toHex();
             }
             default -> {
+                if (key == GLFW.GLFW_KEY_V && (modifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0) {
+                    String clip = net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard();
+                    for (char c : (clip == null ? "" : clip.strip()).toCharArray()) {
+                        charTyped(c); // Ctrl+V a hex colour; same filtering as typing it
+                    }
+                }
             }
         }
         return true;
@@ -236,6 +242,13 @@ public final class ColorComponent extends SettingComponent<ColorSetting> {
 
     @Override
     public void unfocus() {
-        hexFocused = false;
+        if (hexFocused) { // clicking away keeps a valid colour you typed instead of silently dropping it
+            Integer parsed = ColorSetting.parseHex(hexText);
+            if (parsed != null) {
+                setting.set(parsed);
+            }
+            hexFocused = false;
+            syncFromSetting();
+        }
     }
 }

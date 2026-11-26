@@ -8,6 +8,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /** A row in a module's settings panel bound to one {@link ModuleSetting}. */
 public abstract class SettingComponent<S extends ModuleSetting<?>> {
+    /** Modifier keys held for the key press being handled (set by the screen before it passes the key on). */
+    public static int modifiers;
     protected final S setting;
     protected int x;
     protected int y;

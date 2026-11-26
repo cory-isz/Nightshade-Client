@@ -375,6 +375,9 @@ public final class ModManagerScreen extends com.nightshade.gui.menu.NsMenuScreen
         checkUpdates.enabled(updateStatus == null || !updateStatus.endsWith("..."));
         NsButton[] left = {libraries, openFolder};
         NsButton[] right = {browse, checkUpdates, done};
+        openFolder.label(Lang.t("mods.open_folder")); // measure with the full labels every frame
+        browse.label(Lang.t("mods.browse"));
+        libraries.label(showLibraries ? "Libraries: On" : "Libraries: Off");
         int total = 0;
         for (NsButton b : left) {
             total += b.preferredWidth() + 6;

@@ -295,7 +295,7 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
                 new Tab("play", "Play", () -> { }),
                 new Tab("mods", "Mods", () -> minecraft.setScreen(new ModManagerScreen(this))),
                 new Tab("client", "Client", () -> minecraft.setScreen(new ClickGuiScreen(this))),
-                new Tab("cosmetics", "Cosmetics", () -> minecraft.setScreen(new CosmeticsScreen(this))),
+                new Tab("cosmetics", "Wardrobe", () -> minecraft.setScreen(new WardrobeScreen(this))),
                 new Tab("shots", "Screenshots", () -> minecraft.setScreen(new ScreenshotsScreen(this))),
                 new Tab("options", "Options", () -> minecraft.setScreen(new NightshadeOptionsScreen(this))));
         int gap = narrow ? 10 : 16;
@@ -346,10 +346,25 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
             tooltip = Lang.t("menu.quit");
         }
 
+        // Fullscreen beside it (same as F11)
+        int fx2 = qx1 - 4;
+        int fx1 = fx2 - 16;
+        boolean fh = over(mouseX, mouseY, fx1, cy - 8, fx2, cy + 8);
+        float fp = hover("fullscreen", fh);
+        if (fp > 0.01f) {
+            RenderUtil.roundedRect(ctx, fx1, cy - 8, fx2, cy + 8, 4, ColorUtil.fade(ColorUtil.withAlpha(Theme.accent(), Math.round(0x50 * fp)), a));
+        }
+        boolean full = minecraft.options.fullscreen().get();
+        fullscreenIcon(ctx, fx1 + 3, cy - 5, ColorUtil.fade(ColorUtil.lerp(Theme.TEXT_MUTED, 0xFFFFFFFF, fp), a), full);
+        hits.add(new Hit(fx1, cy - 8, fx2, cy + 8, () -> minecraft.options.fullscreen().set(!minecraft.options.fullscreen().get())));
+        if (fh) {
+            tooltip = full ? "Leave fullscreen (F11)" : "Fullscreen (F11)";
+        }
+
         Account account = accounts().active();
         String name = Fonts.trim(account.name(), 90);
         int chipW = 16 + 6 + Fonts.width(name) + 8;
-        accountX2 = qx1 - 6;
+        accountX2 = fx1 - 6;
         accountX1 = accountX2 - chipW;
         accountY1 = cy - 9;
         accountY2 = cy + 9;
@@ -365,6 +380,23 @@ public final class NightshadeMenuScreen extends NsMenuScreen {
             tooltip = account.type().label() + " account - " + (accounts().isSwitching() ? Lang.t("menu.switching") : Lang.t("menu.switch"));
         }
         return tooltip;
+    }
+
+    /** Four corner brackets: pointing out = go fullscreen, pointing in = leave it. */
+    private static void fullscreenIcon(GuiGraphics ctx, int x, int y, int c, boolean full) {
+        int n = 10;
+        int l = 3;
+        int[][] corners = {{x, y, 1, 1}, {x + n - 1, y, -1, 1}, {x, y + n - 1, 1, -1}, {x + n - 1, y + n - 1, -1, -1}};
+        for (int[] k : corners) {
+            int cx = full ? k[0] + k[2] * (l - 1) : k[0];
+            int cy = full ? k[1] + k[3] * (l - 1) : k[1];
+            int dx = full ? -k[2] : k[2];
+            int dy = full ? -k[3] : k[3];
+            int hx1 = Math.min(cx, cx + dx * (l - 1)), hx2 = Math.max(cx, cx + dx * (l - 1)) + 1;
+            int vy1 = Math.min(cy, cy + dy * (l - 1)), vy2 = Math.max(cy, cy + dy * (l - 1)) + 1;
+            ctx.fill(hx1, cy, hx2, cy + 1, c);
+            ctx.fill(cx, vy1, cx + 1, vy2, c);
+        }
     }
 
     /** Letter-spaced capitals: each letter placed from the width of the whole text before it, so the gaps stay even. */

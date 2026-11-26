@@ -43,7 +43,7 @@ public final class DiscordPresence extends Module {
     private volatile long since = System.currentTimeMillis() / 1000L;
     private volatile boolean running;
     private volatile String status = "Not connected";
-    private Thread worker;
+    private volatile Thread worker;
     private String lastPlace = "";
 
     public DiscordPresence() {
@@ -64,9 +64,10 @@ public final class DiscordPresence extends Module {
     @Override
     protected void onDisable() {
         running = false;
-        if (worker != null) {
-            worker.interrupt();
-            worker = null;
+        Thread old = worker;
+        worker = null; // the old thread stops at its next check, even if the module is turned on again right away
+        if (old != null) {
+            old.interrupt();
         }
     }
 
@@ -208,9 +209,9 @@ public final class DiscordPresence extends Module {
 
     private JsonObject activity() {
         JsonObject activity = new JsonObject();
-        activity.addProperty("details", details);
-        if (!state.isEmpty()) {
-            activity.addProperty("state", state);
+        activity.addProperty("details", clip(details));
+        if (state.length() >= 2) {
+            activity.addProperty("state", clip(state)); // Discord rejects the whole status if a line is over 128 characters
         }
         JsonObject timestamps = new JsonObject();
         timestamps.addProperty("start", since);
@@ -222,8 +223,13 @@ public final class DiscordPresence extends Module {
         return activity;
     }
 
+    private static String clip(String s) {
+        return s.length() <= 128 ? s : s.substring(0, 127) + "\u2026";
+    }
+
     private void loop() {
-        while (running) {
+        Thread me = Thread.currentThread();
+        while (worker == me) {
             String id = appId.get().trim();
             if (id.isEmpty()) {
                 status = "Needs a Discord application ID";
@@ -248,7 +254,7 @@ public final class DiscordPresence extends Module {
                 }
                 status = "Connected";
                 String sent = "";
-                while (running && id.equals(appId.get().trim())) {
+                while (worker == me && id.equals(appId.get().trim())) {
                     String now = details + "|" + state + "|" + since;
                     if (!now.equals(sent)) {
                         JsonObject args = new JsonObject();
@@ -271,7 +277,9 @@ public final class DiscordPresence extends Module {
                 sleep(15000);
             }
         }
-        status = "Not connected";
+        if (worker == null) {
+            status = "Not connected";
+        }
     }
 
     private static void sleep(long ms) {

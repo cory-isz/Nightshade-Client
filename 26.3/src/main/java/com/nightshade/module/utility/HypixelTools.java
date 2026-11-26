@@ -68,5 +68,9 @@ public final class HypixelTools {
         protected void onEnable() {
             nextTip = System.currentTimeMillis() + 60_000L;
         }
+        /** For the self-test: tip on the next tick instead of a minute after joining. */
+        public void tipSoonForTest() {
+            nextTip = 0;
+        }
     }
 }

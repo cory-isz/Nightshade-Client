@@ -124,12 +124,21 @@ public final class WorldMapScreen extends NsMenuScreen {
         float perBlock = mapSize / (float) (TEX * step());
         float cx = mapX1 + mapSize / 2f;
         float cy = mapY1 + mapSize / 2f;
+        java.util.List<int[]> labels = new java.util.ArrayList<>();
         for (Waypoint w : NightshadeClient.client().waypoints().inDimension()) {
             int x = Math.round(cx + (float) (w.x() + 0.5 - centerX) * perBlock);
             int y = Math.round(cy + (float) (w.z() + 0.5 - centerZ) * perBlock);
             RenderUtil.rect(ctx, x - 3, y - 3, x + 4, y + 4, 0xFF000000);
             RenderUtil.rect(ctx, x - 2, y - 2, x + 3, y + 3, 0xFF000000 | w.color());
-            Fonts.draw(ctx, w.name(), x + 6, y - 4, 0xFFFFFFFF, true);
+            int[] box = {x + 6, y - 4, x + 6 + Fonts.width(w.name()), y - 4 + Fonts.height()};
+            boolean clash = false;
+            for (int[] o : labels) {
+                clash |= box[0] < o[2] && o[0] < box[2] && box[1] < o[3] && o[1] < box[3];
+            }
+            if (!clash) { // waypoints close together: only the first label, so names don't print over each other
+                labels.add(box);
+                Fonts.draw(ctx, w.name(), x + 6, y - 4, 0xFFFFFFFF, true);
+            }
         }
         if (minecraft.player != null) {
             int x = Math.round(cx + (float) (minecraft.player.getX() - centerX) * perBlock);
@@ -155,7 +164,13 @@ public final class WorldMapScreen extends NsMenuScreen {
         if (RenderUtil.isHovered(mouseX, mouseY, mapX1, mapY1, mapX1 + mapSize, mapY1 + mapSize)) {
             int bx = (int) Math.floor(centerX + (mouseX - cx) / perBlock);
             int bz = (int) Math.floor(centerZ + (mouseY - cy) / perBlock);
-            Fonts.draw(ctx, "X " + bx + "  Z " + bz, mapX1, mapY1 + mapSize + 8, Theme.TEXT_MUTED, false);
+            String where = "X " + bx + "  Z " + bz;
+            if (Fonts.width(where) + 8 <= mapSize - 172) {
+                Fonts.draw(ctx, where, mapX1, mapY1 + mapSize + 8, Theme.TEXT_MUTED, false);
+            } else { // no room left of the buttons: show it inside the map instead of under them
+                RenderUtil.rect(ctx, mapX1 + 2, mapY1 + mapSize - Fonts.height() - 6, mapX1 + Fonts.width(where) + 8, mapY1 + mapSize - 2, 0xB0000000);
+                Fonts.draw(ctx, where, mapX1 + 5, mapY1 + mapSize - Fonts.height() - 3, Theme.TEXT, false);
+            }
         }
         int by = mapY1 + mapSize + 5;
         done.render(ctx, mapX1 + mapSize - 70, by, 70, 16, mouseX, mouseY);

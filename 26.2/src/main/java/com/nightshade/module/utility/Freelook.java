@@ -32,6 +32,9 @@ public final class Freelook extends Module {
             yaw = mc.player.getYRot();
             pitch = mc.player.getXRot();
         }
+        if (mc.options == null) {
+            return; // restored from the config while the game is still starting
+        }
         previous = mc.options.getCameraType();
         mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
         active = this;
@@ -40,9 +43,22 @@ public final class Freelook extends Module {
     @Override
     protected void onDisable() {
         active = null;
-        if (previous != null) {
-            mc.options.setCameraType(previous);
+        CameraType back = previous;
+        previous = null;
+        // Snaplook still held: it restores the view from before both, instead of this one leaving third person on
+        if (back != null && mc.options != null && !Snaplook.takePrevious(back)) {
+            mc.options.setCameraType(back);
         }
+    }
+
+    /** Snaplook was released while Freelook is held: Freelook restores Snaplook's saved view later. */
+    static boolean takePrevious(CameraType view) {
+        Freelook module = active;
+        if (module == null || module.previous == null) {
+            return false;
+        }
+        module.previous = view;
+        return true;
     }
 
     /** Called instead of {@code player.changeLookDirection} while active. Same scale as vanilla (0.15 deg/unit). */

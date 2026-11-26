@@ -57,6 +57,7 @@ public final class MinimapHud extends HudModule {
     private int backCX, backCZ, backStep = 1, backRow = -1;
     private boolean haveFront;
     private DynamicTexture texture;
+    private Level sampledLevel;
     private long lastCompose;
 
     public MinimapHud() {
@@ -93,6 +94,11 @@ public final class MinimapHud extends HudModule {
             haveFront = false;
             backRow = -1;
             return;
+        }
+        if (level != sampledLevel) {
+            sampledLevel = level; // new world or dimension: start a fresh picture instead of reusing the old one
+            haveFront = false;
+            backRow = -1;
         }
         int step = zoom.intValue();
         if (backRow < 0) {

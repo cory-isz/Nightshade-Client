@@ -72,7 +72,7 @@ public final class DamageIndicators extends Module {
                 float diff = before - hp;
                 if (diff > 0.05f || (healing.get() && diff < -0.5f)) {
                     float drift = (float) ((Math.random() - 0.5) * 0.6);
-                    popups.add(new Popup(living.position().add(0, living.getBbHeight() + 0.2, 0), diff, drift));
+                    popups.add(new Popup(living.position().add(0, living.getBbHeight() * 0.85, 0), diff, drift)); // at head height, so close-range hits stay on screen
                     if (popups.size() > 40) {
                         popups.remove(0);
                     }
@@ -97,7 +97,7 @@ public final class DamageIndicators extends Module {
         int h = ctx.guiHeight();
         for (Popup p : popups) {
             float t = (p.age + tickDelta) / 30f;
-            Vec3 world = p.pos.add(p.drift * t, t * 0.9, 0);
+            Vec3 world = p.pos.add(p.drift * t, t * 0.6, 0);
             Vec3 ndc = mc.gameRenderer.projectPointToScreen(world);
             if (ndc.z <= 0 || ndc.z >= 1 || Math.abs(ndc.x) > 1.2 || Math.abs(ndc.y) > 1.2) {
                 continue; // behind the camera or off screen

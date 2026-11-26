@@ -71,6 +71,8 @@ public final class AutoGG extends Module {
             if (mc.getConnection() != null && !mc.isLocalServer()) {
                 mc.getConnection().sendChat(message.get());
                 EffectProbe.hit("Auto GG");
+                com.nightshade.cosmetic.PetMood.cheer();
+                com.nightshade.cosmetic.PetMood.cheer();
                 lastSent = System.currentTimeMillis();
             }
             sendInTicks = -1;

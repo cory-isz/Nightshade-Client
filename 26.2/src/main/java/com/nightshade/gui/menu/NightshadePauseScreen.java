@@ -96,7 +96,7 @@ public final class NightshadePauseScreen extends NsMenuScreen {
         String profile = com.nightshade.NightshadeClient.client().profiles().activeServerProfile();
         list.add(new Row("profiles", "Profiles", profile == null ? "" : profile, PixelIcons.ICON_STAR,
                 () -> minecraft.gui.setScreen(new ProfilesScreen(this)), true, false));
-        list.add(new Row("cosmetics", "Cosmetics", "", PixelIcons.ICON_SKIN, () -> minecraft.gui.setScreen(new CosmeticsScreen(this)), true, false));
+        list.add(new Row("cosmetics", "Wardrobe", "", PixelIcons.ICON_SKIN, () -> minecraft.gui.setScreen(new WardrobeScreen(this)), true, false));
         list.add(new Row("replays", "Replays", "", PixelIcons.MENU_PLAY, () -> minecraft.gui.setScreen(new ReplaysScreen(this)), true, false));
         list.add(new Row("shots", "Screenshots", "", PixelIcons.ICON_EYE, () -> minecraft.gui.setScreen(new ScreenshotsScreen(this)), true, false));
         list.add(new Row("mods", "Mods", MOD_COUNT + " installed", PixelIcons.MENU_MODS,
@@ -128,6 +128,11 @@ public final class NightshadePauseScreen extends NsMenuScreen {
         List<Row> rows = rows();
         int headerH = 46;
         int total = headerH + resumeH + 8 + rows.size() * rowH + 9 + rowH;
+        if (total > height - 16) {
+            // Short window: tighter rows so every row, and the quit row, stays on screen
+            rowH = Math.max(11, (height - 16 - headerH - resumeH - 17) / (rows.size() + 1));
+            total = headerH + resumeH + 8 + rows.size() * rowH + 9 + rowH;
+        }
         int top = Math.max(8, (height - total) / 2);
 
         // Character on the left.

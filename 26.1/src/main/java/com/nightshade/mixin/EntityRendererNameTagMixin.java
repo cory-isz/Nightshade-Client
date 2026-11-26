@@ -26,5 +26,8 @@ public abstract class EntityRendererNameTagMixin {
         if (state.nameTag != null && entity instanceof LivingEntity living) {
             state.nameTag = HealthTags.decorate(living, state.nameTag);
         }
+        if (state.nameTag != null && entity instanceof net.minecraft.world.entity.player.Player) {
+            state.nameTag = com.nightshade.cosmetic.Badges.decorate(entity.getUUID(), state.nameTag); // Nightshade logo
+        }
     }
 }

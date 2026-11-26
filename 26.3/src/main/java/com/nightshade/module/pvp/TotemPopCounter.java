@@ -69,8 +69,11 @@ public final class TotemPopCounter extends Module {
                 }
                 pops.remove(entry.getKey());
                 it.remove();
-            } else if (player.isRemoved() && mc.level != null && mc.level.getPlayerByUUID(entry.getKey()) == null) {
-                it.remove(); // out of range: keep the count, stop watching this instance
+            } else if (player.isRemoved()) {
+                Player again = mc.level == null ? null : mc.level.getPlayerByUUID(entry.getKey());
+                if (again != null) {
+                    entry.setValue(again); // back in view: watch the new copy so their death is still reported
+                }
             }
         }
     }
