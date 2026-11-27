@@ -139,7 +139,8 @@ public final class Shop {
 
     /** Everything for sale right now: the featured deal first, then the daily items, then the weekly picks. */
     public static List<Catalog.Item> listing() {
-        List<Catalog.Item> out = new ArrayList<>(daily());
+        List<Catalog.Item> out = new ArrayList<>(limitedAndNew());
+        out.addAll(daily());
         for (Catalog.Item i : weekly()) {
             if (!out.contains(i)) {
                 out.add(i);
@@ -154,7 +155,42 @@ public final class Shop {
     }
 
     public static boolean available(Catalog.Item i) {
+        if (i != null && i.remote) {
+            return i.free() || !i.limited() || i.limitedOn(now());
+        }
         return i != null && (i.free() || daily().contains(i) || weekly().contains(i) || i == flash());
+    }
+
+    // ------------------------------------------------------------------ limited and new (downloaded items)
+
+    /** Test hook: pretend it is this time (ms since 1970). */
+    public static Long nowOverride;
+
+    public static long now() {
+        return nowOverride != null ? nowOverride : System.currentTimeMillis();
+    }
+
+    /** Downloaded items for sale right now: limited ones still in their window, then the rest. Never part of the rotation. */
+    public static List<Catalog.Item> limitedAndNew() {
+        long now = now();
+        List<Catalog.Item> out = new ArrayList<>();
+        for (Catalog.Item i : Catalog.remote()) {
+            if (i.limitedOn(now)) {
+                out.add(i);
+            }
+        }
+        out.sort(Comparator.comparingLong(i -> i.limitedUntil)); // ending soonest first
+        for (Catalog.Item i : Catalog.remote()) {
+            if (!i.limited() && !i.free()) {
+                out.add(i);
+            }
+        }
+        return out;
+    }
+
+    /** How long a limited item is still for sale (0 when it has ended or is not limited). */
+    public static long millisLeft(Catalog.Item i) {
+        return i == null || !i.limited() ? 0 : Math.max(0, i.limitedUntil - now());
     }
 
     // ------------------------------------------------------------------ flash deal
@@ -245,6 +281,9 @@ public final class Shop {
 
     /** Days until an item is next in the daily or weekly shop (0 = today), or -1 if not within a year. */
     public static int daysUntilBack(Catalog.Item i) {
+        if (i.remote) {
+            return -1;
+        }
         long day = today();
         if (day != backDay) { // work the whole year out once a day, not for every card every frame
             backDay = day;
@@ -276,8 +315,8 @@ public final class Shop {
 
     /** Percent off right now (0 when not discounted or not in the shop). */
     public static int discount(Catalog.Item i) {
-        if (i == null || i.free()) {
-            return 0;
+        if (i == null || i.free() || i.remote) {
+            return 0; // downloaded items always cost their own (special) price
         }
         if (i == featured()) {
             return FEATURED_DISCOUNT;

@@ -88,6 +88,18 @@ public final class CloudSync {
         return points;
     }
 
+    private static volatile int weekMinutes;
+    private static volatile boolean weekGoalDone;
+
+    /** Active minutes the service has counted this week, for the weekly goal. */
+    public static int weekMinutes() {
+        return weekMinutes;
+    }
+
+    public static boolean weekGoalDone() {
+        return weekGoalDone;
+    }
+
     public static int streak() {
         return streak;
     }
@@ -163,6 +175,8 @@ public final class CloudSync {
                 if (r != null && r.has("points")) {
                     points = r.get("points").getAsInt();
                     streak = r.get("streak").getAsInt();
+                    weekMinutes = r.has("weekMinutes") ? r.get("weekMinutes").getAsInt() : weekMinutes;
+                    weekGoalDone = r.has("weekGoalDone") ? r.get("weekGoalDone").getAsBoolean() : weekGoalDone;
                     if (r.has("notes")) {
                         for (JsonElement n : r.getAsJsonArray("notes")) {
                             JsonObject o = n.getAsJsonObject();
@@ -349,6 +363,8 @@ public final class CloudSync {
         }
         points = p.get("points").getAsInt();
         streak = p.has("streak") ? p.get("streak").getAsInt() : streak;
+        weekMinutes = p.has("weekMinutes") ? p.get("weekMinutes").getAsInt() : weekMinutes;
+        weekGoalDone = p.has("weekGoalDone") ? p.get("weekGoalDone").getAsBoolean() : weekGoalDone;
         Set<String> own = new HashSet<>();
         for (JsonElement e : p.getAsJsonArray("owned")) {
             own.add(e.getAsString());

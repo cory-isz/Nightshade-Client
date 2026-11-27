@@ -5,8 +5,16 @@
 // Nightshade users can draw their cosmetics. The shop rotation is identical to the game's (see shop.js).
 import * as shop from "./shop.js";
 
-const DAILY = 25;          // first game of the day
-const STREAK = 100;        // every 7-day streak
+import CONTENT from "./content.json";
+
+const DAILY = 25;          // first game of the day, on day 1 of a streak...
+const DAILY_STEP = 5;      // ...growing this much a day of the streak...
+const DAILY_MAX = 60;      // ...up to this
+const STREAK = 200;        // every 7-day streak
+const WEEKLY_GOAL = 300;   // active minutes in a week (Monday to Sunday, UTC)...
+const WEEKLY_BONUS = 250;  // ...for this bonus
+const dailyBonus = (streak) => Math.min(DAILY_MAX, DAILY + DAILY_STEP * Math.max(0, streak - 1));
+const weekOf = (day) => Math.floor((day - 4) / 7);
 const IMPORT_CAP = 15000;  // most a one-time import of old local progress can be worth
 const SESSION_DAYS = 30;
 const MAX_LOOKUP = 100;
@@ -75,6 +83,8 @@ async function profile(env, uuid) {
     points: p.points,
     streak: p.streak,
     activeMinutes: p.active_minutes,
+    weekMinutes: p.week_id === weekOf(utcDay(Date.now())) ? p.week_minutes : 0,
+    weekGoalDone: p.week_id === weekOf(utcDay(Date.now())) && !!p.week_paid,
     imported: !!p.imported,
     owned: [...own],
     outfit: out ? JSON.parse(out.outfit) : {},
@@ -136,27 +146,41 @@ async function heartbeat(env, uuid) {
   const now = Date.now();
   const notes = [];
   let points = p.points, streak = p.streak, lastDay = p.last_day, active = p.active_minutes, lastBeat = p.last_beat;
+  const day = utcDay(now), week = weekOf(day);
+  let weekId = p.week_id, weekMinutes = p.week_minutes, weekPaid = p.week_paid;
+  if (weekId !== week) {
+    weekId = week;
+    weekMinutes = 0;
+    weekPaid = 0;
+  }
   if (now - lastBeat >= 55000) { // at most one point a minute, however often this is called
     points += 1;
     active += 1;
+    weekMinutes += 1;
     lastBeat = now;
+    if (!weekPaid && weekMinutes >= WEEKLY_GOAL) {
+      weekPaid = 1;
+      points += WEEKLY_BONUS;
+      notes.push({ title: "Weekly goal +" + WEEKLY_BONUS, text: "You played 5 hours this week" });
+      await history(env, uuid, WEEKLY_BONUS, "Weekly goal: 5 hours played");
+    }
   }
-  const day = utcDay(now);
   if (day !== lastDay) {
     streak = lastDay === day - 1 ? streak + 1 : 1;
     lastDay = day;
-    points += DAILY;
-    notes.push({ title: "Daily bonus +" + DAILY, text: "Day " + streak + " streak" });
-    await history(env, uuid, DAILY, "Daily bonus");
+    const bonus = dailyBonus(streak);
+    points += bonus;
+    notes.push({ title: "Daily bonus +" + bonus, text: "Day " + streak + " streak" });
+    await history(env, uuid, bonus, "Daily bonus (day " + streak + ")");
     if (streak % 7 === 0) {
       points += STREAK;
       notes.push({ title: "7-day streak +" + STREAK, text: "Keep it going!" });
       await history(env, uuid, STREAK, "7-day streak");
     }
   }
-  await env.DB.prepare("UPDATE players SET points = ?, streak = ?, last_day = ?, last_beat = ?, active_minutes = ? WHERE uuid = ?")
-    .bind(points, streak, lastDay, lastBeat, active, uuid).run();
-  return json({ points, streak, activeMinutes: active, notes });
+  await env.DB.prepare("UPDATE players SET points = ?, streak = ?, last_day = ?, last_beat = ?, active_minutes = ?, week_id = ?, week_minutes = ?, week_paid = ? WHERE uuid = ?")
+    .bind(points, streak, lastDay, lastBeat, active, weekId, weekMinutes, weekPaid, uuid).run();
+  return json({ points, streak, activeMinutes: active, weekMinutes, weekGoalDone: !!weekPaid, notes });
 }
 
 async function unlock(request, env, uuid) {
@@ -166,7 +190,7 @@ async function unlock(request, env, uuid) {
   const own = await owned(env, uuid);
   if (item.price === 0 || own.has(item.id)) return json(await profile(env, uuid));
   const now = Date.now(), day = shop.today(now), slot = shop.flashSlot(now);
-  if (!shop.available(item, day, slot)) return err(409, "Not in the shop right now");
+  if (!shop.available(item, day, slot, now)) return err(409, item.remote && item.until ? "This limited item is no longer available" : "Not in the shop right now");
   const cost = shop.price(item, day, slot);
   const p = await player(env, uuid);
   if (p.points < cost) return err(409, "Not enough points");
@@ -260,7 +284,7 @@ async function admin(request, env) {
     await env.DB.prepare("UPDATE players SET points = ? WHERE uuid = ?").bind(Math.max(0, n), uuid).run();
     await history(env, uuid, 0, "Owner set points to " + Math.max(0, n));
   } else if (b.action === "unlock_all") {
-    await env.DB.batch(shop.ITEMS.filter((i) => i.price > 0).map((i) => env.DB.prepare("INSERT OR IGNORE INTO owned (uuid, item) VALUES (?, ?)").bind(uuid, i.id)));
+    await env.DB.batch([...shop.ITEMS, ...shop.REMOTE].filter((i) => i.price > 0).map((i) => env.DB.prepare("INSERT OR IGNORE INTO owned (uuid, item) VALUES (?, ?)").bind(uuid, i.id)));
     await history(env, uuid, 0, "Owner unlocked everything");
   } else {
     return err(400, "Unknown action");
@@ -278,6 +302,8 @@ export default {
           return json({ ok: true, service: "nightshade-cosmetics", items: shop.ITEMS.length });
         case "GET /v1/shop":
           return json(shop.snapshot(), 200, { "cache-control": "public, max-age=30" });
+        case "GET /v1/content":
+          return json(CONTENT, 200, { "cache-control": "public, max-age=300" });
         case "GET /v1/outfits":
           return lookup(url, env);
         case "POST /v1/auth/start":

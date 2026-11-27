@@ -70,7 +70,7 @@ public final class SessionRecapScreen extends NsMenuScreen {
         Fonts.draw(ctx, "Session Recap", x1 + 30, 11, 0xFFFFFFFF, false);
         String where = recap.sessionName().isEmpty() ? "This session" : recap.sessionName();
         Fonts.draw(ctx, Fonts.trim(where + "  ·  " + time(recap.sessionMillis()) + " played  ·  "
-                + recap.fightsWon() + " of " + recap.fights().size() + " fights won", x2 - x1 - 30), x1 + 30, 22, Theme.TEXT_DIM, false);
+                + recap.fightsWon() + " of " + recap.fights().size() + " fights won", (x2 - x1) * 55 / 100), x1 + 30, 22, Theme.TEXT_DIM, false);
 
         int gap = 6;
         int cw = (x2 - x1 - gap * 3) / 4;
@@ -105,7 +105,9 @@ public final class SessionRecapScreen extends NsMenuScreen {
             Fonts.draw(ctx, "Time", cols[5], y, Theme.TEXT_DIM, false);
             y += 11;
         }
-        for (int i = 0; i < fights.size() && y + rowH <= bottom; i++) {
+        int shown = 0;
+        for (int i = 0; i < fights.size() && y + rowH <= bottom - (i < fights.size() - 1 ? 11 : 0); i++) {
+            shown++;
             SessionRecap.Fight f = fights.get(i);
             RenderUtil.roundedRect(ctx, x1, y, x2, y + rowH - 2, 4, i % 2 == 0 ? Theme.tint(0x80140C26) : Theme.tint(0x50140C26));
             int c = switch (f.result) {
@@ -127,6 +129,10 @@ public final class SessionRecapScreen extends NsMenuScreen {
             Fonts.draw(ctx, f.swings == 0 ? "-" : f.accuracy() + "%", cols[4], ty, Theme.TEXT, false);
             Fonts.draw(ctx, f.seconds() + "s", cols[5], ty, Theme.TEXT, false);
             y += rowH;
+        }
+        if (shown < fights.size()) {
+            int more = fights.size() - shown;
+            Fonts.draw(ctx, "and " + more + " more fight" + (more == 1 ? "" : "s"), x1 + 8, y + 1, Theme.TEXT_DIM, false);
         }
         int fy = height - 26;
         clear.render(ctx, x1, fy, 70, 18, mouseX, mouseY);

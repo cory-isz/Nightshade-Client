@@ -11,18 +11,34 @@ public final class Models {
     }
 
     public static WingModel wing(String id) {
+        WingModel r = RemoteContent.wing(id);
+        if (r != null) {
+            return r;
+        }
         return (WingModel) CACHE.computeIfAbsent("wing_" + id, k -> WingDesigns.build(id));
     }
 
     public static Designs.Cape cape(String id) {
+        Designs.Cape r = RemoteContent.cape(id);
+        if (r != null) {
+            return r;
+        }
         return (Designs.Cape) CACHE.computeIfAbsent(id, k -> Designs.cape(id.substring("cape_".length()).replace("moon", "moon")));
     }
 
     public static Hats.Hat hat(String id) {
+        Hats.Hat r = RemoteContent.hat(id);
+        if (r != null) {
+            return r;
+        }
         return (Hats.Hat) CACHE.computeIfAbsent("hat_" + id, k -> Hats.build(id));
     }
 
     public static Companions.Companion companion(String id) {
+        Companions.Companion r = RemoteContent.companion(id);
+        if (r != null) {
+            return r;
+        }
         return (Companions.Companion) CACHE.computeIfAbsent("pet_" + id, k -> Companions.build(id));
     }
 

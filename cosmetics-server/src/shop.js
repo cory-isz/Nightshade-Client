@@ -2,6 +2,7 @@
 // game always agree on what is for sale and for how much. It reproduces java.util.Random and Collections.shuffle
 // bit for bit; test/shop.test.mjs checks it against a rotation written by the real Java code.
 import CATALOG from "./catalog.json";
+import CONTENT from "./content.json";
 
 export const DAILY_SLOTS = 6;
 export const WEEKLY_SLOTS = 2;
@@ -12,8 +13,22 @@ export const FLASH_HOURS = 4;
 const DAILY_DISCOUNTS = [0, 0, 10, 15, 20, 25];
 const WEEKLY_DISCOUNTS = [0, 10, 20];
 
-export const ITEMS = CATALOG.items;
-export const BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
+export const ITEMS = CATALOG.items; // built-in items only: the rotation is worked out from these, exactly like the game
+
+// Downloaded items (signed content the game fetches from /v1/content). They are never part of the rotation: each has
+// its own price and, if limited, a window when it can be bought.
+export const REMOTE = (() => {
+  try {
+    return JSON.parse(CONTENT.content).items.map((i) => ({
+      id: i.id, name: i.name, category: i.category, tier: i.tier, price: i.price, remote: true,
+      from: i.limited ? i.limited.from : 0, until: i.limited ? i.limited.until : 0, tag: i.limited ? i.limited.tag : null,
+    }));
+  } catch (e) {
+    return [];
+  }
+})();
+export const BY_ID = new Map([...ITEMS, ...REMOTE].map((i) => [i.id, i]));
+export const limitedOn = (i, now = Date.now()) => !!i.until && now >= i.from && now < i.until;
 export const CATEGORIES = CATALOG.categories;
 
 const free = (i) => i.price === 0;
@@ -121,7 +136,7 @@ export function bundle(day) {
 }
 
 export function discount(item, day, slot) {
-  if (!item || free(item)) return 0;
+  if (!item || free(item) || item.remote) return 0; // downloaded items always cost their own price
   const d = daily(day);
   if (d[0] === item) return FEATURED_DISCOUNT;
   if (flash(day, slot) === item) return FLASH_DISCOUNT;
@@ -135,7 +150,8 @@ export function price(item, day, slot) {
   return off === 0 ? item.price : roundTen(item.price, off);
 }
 
-export function available(item, day, slot) {
+export function available(item, day, slot, now = Date.now()) {
+  if (item && item.remote) return free(item) || !item.until || limitedOn(item, now);
   return !!item && (free(item) || daily(day).includes(item) || weekly(day).includes(item) || flash(day, slot) === item);
 }
 
@@ -155,6 +171,7 @@ export function snapshot(now = Date.now()) {
     weekly: weekly(day).map(card),
     flash: (() => { const f = flash(day, slot); return f ? card(f) : null; })(),
     bundle: { items: bundle(day).map((i) => i.id), off: BUNDLE_DISCOUNT },
+    limited: REMOTE.filter((i) => limitedOn(i, now) || (!i.until && !free(i))).map((i) => ({ id: i.id, price: i.price, until: i.until, tag: i.tag })),
     resets: {
       daily: (day + 1) * 86400000 - now,
       weekly: ((week(day) + 1) * 7 + 4) * 86400000 - now,

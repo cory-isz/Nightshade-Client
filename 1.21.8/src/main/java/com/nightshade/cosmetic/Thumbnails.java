@@ -18,11 +18,22 @@ public final class Thumbnails {
     public static final int H = 96;
     private static final Map<String, ResourceLocation> CACHE = new HashMap<>();
 
+    private static volatile boolean remoteChanged;
+
     private Thumbnails() {
+    }
+
+    /** New cosmetics were downloaded: their thumbnails are rebuilt the next time they are drawn. */
+    public static void clearRemote() {
+        remoteChanged = true;
     }
 
     /** The texture for an item, or null when it has no voxel model (classic capes, auras). */
     public static ResourceLocation get(Catalog.Item item) {
+        if (remoteChanged) { // checked here, on the render thread, so the cache is never touched from the download thread
+            remoteChanged = false;
+            CACHE.keySet().removeIf(k -> Catalog.byIdBuiltIn(k) == null);
+        }
         if (CACHE.containsKey(item.id)) {
             return CACHE.get(item.id);
         }

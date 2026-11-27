@@ -27,14 +27,21 @@ import java.util.Set;
 
 /**
  * Points, owned and equipped cosmetics. Saved in config/nightshade/wardrobe.json on this computer only; nothing is
- * sent anywhere. Points: 1 per active minute in game, +25 daily, +100 per 7-day streak, +300 welcome gift.
+ * sent anywhere. Points: 1 per active minute in game, a daily bonus that grows with your streak (25 up to 60), +200 per
+ * 7-day streak, +250 for playing 5 hours in a week, +300 welcome gift.
  */
 public final class Wardrobe {
     /** Render-state id used by the Wardrobe's 3D preview (shows tentative picks). */
     public static final int PREVIEW_ID = -735_412;
     public static final int WELCOME = 300;
+    /** Daily bonus on day 1 of a streak; it grows by DAILY_STEP a day up to DAILY_MAX. */
     public static final int DAILY = 25;
-    public static final int STREAK = 100;
+    public static final int DAILY_STEP = 5;
+    public static final int DAILY_MAX = 60;
+    public static final int STREAK = 200;
+    /** Play this many active minutes in a week (Monday to Sunday, UTC) for the weekly bonus. */
+    public static final int WEEKLY_GOAL = 300;
+    public static final int WEEKLY_BONUS = 250;
     public static final int AFK_SECONDS = 300;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -45,6 +52,9 @@ public final class Wardrobe {
     private static int sessionEarned;
     private static String lastDay = "";
     private static int streak;
+    private static long weekId = Long.MIN_VALUE;
+    private static int weekMinutes;
+    private static boolean weekPaid;
     private static boolean hidden;
     private static final Set<String> OWNED = new LinkedHashSet<>();
     private static final Map<Catalog.Category, String> EQUIPPED = new EnumMap<>(Catalog.Category.class);
@@ -86,6 +96,7 @@ public final class Wardrobe {
             return;
         }
         loaded = true;
+        RemoteContent.start(); // downloaded cosmetics: the saved copy now, new ones in the background
         boolean fresh = true;
         try {
             if (Files.isRegularFile(file())) {
@@ -96,6 +107,9 @@ public final class Wardrobe {
                 ticksTowardPoint = o.has("ticksTowardPoint") ? o.get("ticksTowardPoint").getAsInt() : 0;
                 lastDay = o.has("lastDay") ? o.get("lastDay").getAsString() : "";
                 streak = o.has("streak") ? o.get("streak").getAsInt() : 0;
+                weekId = o.has("weekId") ? o.get("weekId").getAsLong() : Long.MIN_VALUE;
+                weekMinutes = o.has("weekMinutes") ? o.get("weekMinutes").getAsInt() : 0;
+                weekPaid = o.has("weekPaid") && o.get("weekPaid").getAsBoolean();
                 hidden = o.has("hidden") && o.get("hidden").getAsBoolean();
                 if (o.has("owned")) {
                     for (JsonElement e : o.getAsJsonArray("owned")) {
@@ -165,6 +179,9 @@ public final class Wardrobe {
             o.addProperty("ticksTowardPoint", ticksTowardPoint);
             o.addProperty("lastDay", lastDay);
             o.addProperty("streak", streak);
+            o.addProperty("weekId", weekId);
+            o.addProperty("weekMinutes", weekMinutes);
+            o.addProperty("weekPaid", weekPaid);
             o.addProperty("hidden", hidden);
             JsonArray owned = new JsonArray();
             OWNED.forEach(owned::add);
@@ -259,6 +276,7 @@ public final class Wardrobe {
             points++;
             sessionEarned++;
             dirty = true;
+            weeklyMinute();
             if (sessionEarned % 60 == 0) {
                 HISTORY.add(0, new String[]{"Played 1 hour", "+60", LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM d, HH:mm"))});
                 notify("+60 points", "1 hour played  -  " + String.format("%,d", points) + " total");
@@ -278,7 +296,8 @@ public final class Wardrobe {
         String yesterday = LocalDate.now().minusDays(1).toString();
         streak = yesterday.equals(lastDay) ? streak + 1 : 1;
         lastDay = today;
-        earn(DAILY, "Daily bonus");
+        int bonus = dailyBonus(streak);
+        earn(bonus, "Daily bonus (day " + streak + ")");
         String msg = "Day " + streak + " streak";
         if (streak % 7 == 0) {
             earn(STREAK, "7-day streak");
@@ -286,7 +305,7 @@ public final class Wardrobe {
         } else {
             msg += ", " + (7 - streak % 7) + " more for +" + STREAK;
         }
-        notify("Daily bonus +" + DAILY, msg);
+        notify("Daily bonus +" + bonus, msg);
         Catalog.Item deal = Shop.featured();
         if (deal != null && !owns(deal)) {
             notify("New in the shop", deal.name + " is " + Shop.FEATURED_DISCOUNT + "% off today");
@@ -294,6 +313,54 @@ public final class Wardrobe {
         List<Catalog.Item> wished = wishlistInShop();
         if (!wished.isEmpty()) { // starred items are your wishlist
             notify("From your wishlist", wished.get(0).name + (wished.size() > 1 ? " and " + (wished.size() - 1) + " more are" : " is") + " in the shop today");
+        }
+    }
+
+    /** The daily bonus for a given day of your streak: 25 on day 1, +5 a day, at most 60. */
+    public static int dailyBonus(int streakDay) {
+        return Math.min(DAILY_MAX, DAILY + DAILY_STEP * Math.max(0, streakDay - 1));
+    }
+
+    private static long currentWeek() {
+        return Math.floorDiv(LocalDate.now(java.time.ZoneOffset.UTC).toEpochDay() - 4, 7);
+    }
+
+    /** One more active minute towards this week's goal (offline; the service counts it when you are signed in). */
+    private static void weeklyMinute() {
+        long w = currentWeek();
+        if (w != weekId) {
+            weekId = w;
+            weekMinutes = 0;
+            weekPaid = false;
+        }
+        weekMinutes++;
+        if (!weekPaid && weekMinutes >= WEEKLY_GOAL) {
+            weekPaid = true;
+            earn(WEEKLY_BONUS, "Weekly goal: 5 hours played");
+            notify("Weekly goal +" + WEEKLY_BONUS, "You played 5 hours this week");
+        }
+    }
+
+    /** Active minutes played this week. */
+    public static int weekMinutes() {
+        if (CloudSync.online()) {
+            return CloudSync.weekMinutes();
+        }
+        return weekId == currentWeek() ? weekMinutes : 0;
+    }
+
+    /** Whether this week's goal has been reached. */
+    public static boolean weekGoalDone() {
+        if (CloudSync.online()) {
+            return CloudSync.weekGoalDone();
+        }
+        return weekId == currentWeek() && weekPaid;
+    }
+
+    /** Test hook: plays this many offline minutes towards the weekly goal. */
+    public static void weeklyMinutesForTest(int n) {
+        for (int i = 0; i < n; i++) {
+            weeklyMinute();
         }
     }
 
@@ -343,6 +410,16 @@ public final class Wardrobe {
 
     public static List<String[]> history() {
         return CloudSync.online() && !CloudSync.history().isEmpty() ? CloudSync.history() : HISTORY;
+    }
+
+    /** Test hooks: own or stop owning an item on this computer (offline only). */
+    public static void grantForTest(Catalog.Item i, boolean own) {
+        ensureLoaded();
+        if (own) {
+            OWNED.add(i.id);
+        } else {
+            OWNED.remove(i.id);
+        }
     }
 
     public static boolean owns(Catalog.Item i) {
@@ -502,7 +579,7 @@ public final class Wardrobe {
     public static void randomOutfit(java.util.Random rnd) {
         for (Catalog.Category c : Catalog.Category.values()) {
             List<Catalog.Item> own = new ArrayList<>();
-            for (Catalog.Item i : Catalog.in(c)) {
+            for (Catalog.Item i : Catalog.listed(c)) {
                 if (owns(i)) {
                     own.add(i);
                 }
@@ -517,7 +594,7 @@ public final class Wardrobe {
 
     public static int ownedCount() {
         int n = 0;
-        for (Catalog.Item i : Catalog.all()) {
+        for (Catalog.Item i : Catalog.everything()) {
             if (owns(i)) {
                 n++;
             }
@@ -589,7 +666,7 @@ public final class Wardrobe {
             CloudSync.admin("unlock_all", 0, OwnerKey.secret());
         }
         int n = 0;
-        for (Catalog.Item i : Catalog.all()) {
+        for (Catalog.Item i : Catalog.everything()) {
             if (OWNED.add(i.id)) {
                 n++;
             }

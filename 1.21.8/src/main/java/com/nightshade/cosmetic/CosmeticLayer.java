@@ -216,8 +216,8 @@ public final class CosmeticLayer extends RenderLayer<PlayerRenderState, PlayerMo
                 FlatCape.render(pose.last(), out.getBuffer(glowType(FlatCape.glow(capeStyle))), LightTexture.FULL_BRIGHT, overlay, true);
             }
         } else {
-            draw(pose, out, c.model, light, overlay, 1f / 16f, Catalog.Category.CAPES);
-            draw(pose, out, c.glow, LightTexture.FULL_BRIGHT, overlay, 1f / 16f, Catalog.Category.CAPES);
+            draw(pose, out, c.model, light, overlay, c.unit, Catalog.Category.CAPES);
+            draw(pose, out, c.glow, LightTexture.FULL_BRIGHT, overlay, c.unit, Catalog.Category.CAPES);
         }
         pose.popPose();
     }
@@ -299,8 +299,21 @@ public final class CosmeticLayer extends RenderLayer<PlayerRenderState, PlayerMo
 
     // ------------------------------------------------------------------ auras (orbiting 3D specks)
 
+    /** The movements an aura can use; downloaded auras pick one of these by name. */
+    public static final java.util.Set<String> AURA_MOTIONS = java.util.Set.of("petals", "embers", "frost_motes", "fireflies", "hearts",
+            "rainbow", "bubbles", "notes", "void_rift", "orbit", "snowfall", "twinkle");
+
+    private static String motion(String id) {
+        RemoteContent.Aura r = RemoteContent.aura(id);
+        return r != null ? r.motion() : id;
+    }
+
     /** How many specks an aura has. */
     public static int auraCount(String id) {
+        RemoteContent.Aura r = RemoteContent.aura(id);
+        if (r != null) {
+            return r.count();
+        }
         return switch (id) {
             case "petals" -> 22;
             case "frost_motes" -> 20;
@@ -317,6 +330,10 @@ public final class CosmeticLayer extends RenderLayer<PlayerRenderState, PlayerMo
 
     /** An aura's colours (also used for its Wardrobe thumbnail). */
     public static int[] auraColors(String id) {
+        RemoteContent.Aura r = RemoteContent.aura(id);
+        if (r != null) {
+            return r.colors();
+        }
         return switch (id) {
             case "petals" -> new int[]{0xFFFF8FC8, 0xFFFFB8DC, 0xFFFF6FB0};
             case "frost_motes" -> new int[]{0xFFBFE4FF, 0xFFE6F6FF, 0xFF8EC5FF};
@@ -340,7 +357,26 @@ public final class CosmeticLayer extends RenderLayer<PlayerRenderState, PlayerMo
             float y;
             float z;
             float size;
-            switch (id) {
+            switch (motion(id)) {
+                case "snowfall" -> {
+                    // flakes drifting down all around you, swaying as they fall
+                    float fall = ((t * 0.006f + i * 0.113f) % 1f);
+                    float r = 0.5f + (i % 4) * 0.16f;
+                    float a = phase + (float) Math.sin(t * 0.01f + i) * 0.4f;
+                    x = (float) Math.cos(a) * r + (float) Math.sin(t * 0.04f + i * 1.3f) * 0.1f;
+                    z = (float) Math.sin(a) * r + (float) Math.cos(t * 0.035f + i) * 0.1f;
+                    y = -0.9f + fall * 2.6f;
+                    size = 0.45f + (i % 3) * 0.15f; // small flakes, a few slightly bigger
+                }
+                case "twinkle" -> {
+                    // little stars hanging still around you, each fading in and out
+                    float a = phase + t * 0.004f;
+                    float r = 0.55f + (i % 3) * 0.17f;
+                    x = (float) Math.cos(a) * r;
+                    z = (float) Math.sin(a) * r;
+                    y = -0.6f + (i * 0.37f % 1f) * 2.0f;
+                    size = Math.max(0f, (float) Math.sin(t * 0.07f + i * 1.9f)) * 1.4f;
+                }
                 case "petals" -> {
                     float fall = ((t * 0.02f + i * 0.137f) % 1f);
                     float r = 0.55f + (i % 3) * 0.12f;

@@ -37,6 +37,15 @@ public final class Catalog {
         public final String description;
         /** For classic capes: the texture name used by the Cosmetics module. */
         public final String classicCape;
+        /** Downloaded from the cosmetics service instead of built into this version. */
+        public boolean remote;
+        /** Limited items can only be bought between these times (ms since 1970, UTC); 0 = no limit. */
+        public long limitedFrom;
+        public long limitedUntil;
+        /** Shown on limited items, e.g. "Winter 2026". */
+        public String limitedTag;
+        /** When a downloaded item was added (ms), for the "New" badge; 0 = unknown. */
+        public long added;
 
         Item(String id, String name, Category category, Tier tier, int price, String description, String classicCape) {
             this.id = id;
@@ -51,6 +60,51 @@ public final class Catalog {
         public boolean free() {
             return price == 0;
         }
+
+        public boolean limited() {
+            return limitedUntil > 0;
+        }
+
+        /** A limited item that can still be bought at {@code now}. */
+        public boolean limitedOn(long now) {
+            return limited() && now >= limitedFrom && now < limitedUntil;
+        }
+    }
+
+    /** Makes a downloaded item (see {@link RemoteContent}). */
+    public static Item remoteItem(String id, String name, Category category, Tier tier, int price, String description) {
+        Item i = new Item(id, name, category, tier, price, description, null);
+        i.remote = true;
+        return i;
+    }
+
+    /** Downloaded items. They are kept apart from the built-in list so the shop rotation never changes when new ones arrive. */
+    private static volatile List<Item> remoteItems = List.of();
+
+    static void setRemote(List<Item> items) {
+        remoteItems = List.copyOf(items);
+    }
+
+    public static List<Item> remote() {
+        return remoteItems;
+    }
+
+    /** Every item: built-in, then downloaded (not for the shop rotation, which only uses {@link #all()}). */
+    public static List<Item> everything() {
+        List<Item> out = new ArrayList<>(ITEMS);
+        out.addAll(remoteItems);
+        return out;
+    }
+
+    /** Everything the Wardrobe lists in a category: built-in items, then downloaded ones. */
+    public static List<Item> listed(Category c) {
+        List<Item> out = in(c);
+        for (Item i : remoteItems) {
+            if (i.category == c) {
+                out.add(i);
+            }
+        }
+        return out;
     }
 
     private static final List<Item> ITEMS = new ArrayList<>();
@@ -184,11 +238,26 @@ public final class Catalog {
         return out;
     }
 
+    /** A built-in item (never a downloaded one). */
+    public static Item byIdBuiltIn(String id) {
+        for (Item i : ITEMS) {
+            if (i.id.equals(id)) {
+                return i;
+            }
+        }
+        return null;
+    }
+
     public static Item byId(String id) {
         if (id == null) {
             return null;
         }
         for (Item i : ITEMS) {
+            if (i.id.equals(id)) {
+                return i;
+            }
+        }
+        for (Item i : remoteItems) {
             if (i.id.equals(id)) {
                 return i;
             }

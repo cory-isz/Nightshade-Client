@@ -1,6 +1,6 @@
 // Checks the server's shop against the rotation the real Java client code produced (test/shop_ref.json).
 import { readFileSync } from "node:fs";
-import * as shop from "../src/shop.js";
+import * as shop from "../dist/shop.js";
 const ref = JSON.parse(readFileSync(new URL("./shop_ref.json", import.meta.url)));
 let bad = 0, checks = 0;
 const ids = (l) => l.map((i) => i.id).join(",");

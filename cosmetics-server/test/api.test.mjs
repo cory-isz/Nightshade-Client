@@ -58,8 +58,11 @@ const b1 = await call("POST", "/v1/me/bundle", null, T);
 check(b1.status === 200 && shop.bundle(day).every((i) => b1.body.owned.includes(i.id)) && u.body.points - b1.body.points === bp, "bundle unlocks its items for the bundle price");
 check((await call("POST", "/v1/me/bundle", null, T)).status === 409, "can't buy the bundle twice");
 // outfits: only owned (or free) items are stored, and others can look them up
-const o = await call("PUT", "/v1/me/outfit", { outfit: { [deal.category]: deal.id, CAPES: notForSale.category === "CAPES" ? notForSale.id : "cape_galaxy", WINGS: "seraph" }, show: true }, T);
-check(o.body.outfit[deal.category] === deal.id && !Object.values(o.body.outfit).includes("seraph"), "outfit keeps owned items and drops unowned ones");
+// an item you don't own, in a different category from the deal (so it doesn't overwrite it)
+const unowned = deal.category === "WINGS" ? "planet" : "seraph";
+const unownedCat = deal.category === "WINGS" ? "HATS" : "WINGS";
+const o = await call("PUT", "/v1/me/outfit", { outfit: { [unownedCat]: unowned, [deal.category]: deal.id }, show: true }, T);
+check(o.body.outfit[deal.category] === deal.id && !Object.values(o.body.outfit).includes(unowned), "outfit keeps owned items and drops unowned ones");
 const look = await call("GET", "/v1/outfits?uuids=" + UUID + ",ffffffffffffffffffffffffffffffff,bad");
 check(look.body[UUID] && Object.keys(look.body).length === 1, "public lookup returns this player's outfit only");
 await call("PUT", "/v1/me/outfit", { outfit: {}, show: false }, T);
@@ -75,9 +78,62 @@ check((await call("POST", "/v1/admin", { key: "wrong", action: "points_add", uui
 const ad = await call("POST", "/v1/admin", { key: OWNER, action: "points_set", uuid: UUID, amount: 1234 });
 check(ad.status === 200 && ad.body.points === 1234, "admin with the owner key can set points");
 const ua = await call("POST", "/v1/admin", { key: OWNER, action: "unlock_all", uuid: UUID });
-check(ua.body.owned.length === shop.ITEMS.filter((i) => i.price > 0).length, "admin can unlock everything");
+check(ua.body.owned.length === [...shop.ITEMS, ...shop.REMOTE].filter((i) => i.price > 0).length, "admin can unlock everything, downloaded items too");
 check((await call("POST", "/v1/auth/logout", null, T)).status === 200 && (await call("GET", "/v1/me", null, T)).status === 401, "logout ends the session");
 const snap = (await call("GET", "/v1/shop")).body;
 check(snap.daily.length === 6 && snap.weekly.length === 2 && snap.daily[0].off === 40 && snap.flash.off === 50, "shop endpoint lists today's shop");
+// ---------------------------------------------------------------- 1.33: downloaded content, limited items, points
+{
+  const { createPublicKey, verify } = await import("node:crypto");
+  const c = await call("GET", "/v1/content");
+  const key = createPublicKey({ key: Buffer.from("MCowBQYDK2VwAyEAmmcD1wXU8ZvsO+a0PZ2mzsI1pcpDvg0VloFzFT4ZIaI=", "base64"), format: "der", type: "spki" });
+  check(c.status === 200 && verify(null, Buffer.from(c.body.content, "utf8"), key, Buffer.from(c.body.sig, "base64")), "content endpoint serves content signed with the game's key");
+  const items = JSON.parse(c.body.content).items;
+  check(items.length === 8 && shop.REMOTE.length === 8, "the Winter set has 8 items (" + items.length + ")");
+  const counts = {};
+  for (const i of items) counts[i.category] = (counts[i.category] || 0) + 1;
+  check(counts.WINGS === 2 && counts.CAPES === 2 && counts.HATS === 1 && counts.AURAS === 1 && counts.COMPANIONS === 2, "2 wings, 2 capes, 1 hat, 1 aura, 2 pets");
+  check(shop.ITEMS.every((i) => !i.remote) && !shop.daily(day).some((i) => i.remote), "downloaded items never enter the shop rotation");
+  const wings = shop.BY_ID.get("winter_frostbite_wings");
+  const realNow = Date.now;
+  const T3 = (await signIn("cccccccccccccccccccccccccccccccc", "Buyer")).body.token;
+  db.prepare("UPDATE players SET points = 5000 WHERE uuid = ?").run("cccccccccccccccccccccccccccccccc");
+  Date.now = () => wings.from + 86400000; // inside the window
+  const buy = await call("POST", "/v1/me/unlock", { item: wings.id }, T3);
+  check(buy.status === 200 && buy.body.owned.includes(wings.id) && buy.body.points === 5000 - wings.price, "a limited item costs its special price (" + wings.price + ") while it's on sale");
+  const wear = await call("PUT", "/v1/me/outfit", { outfit: { WINGS: wings.id }, show: true }, T3);
+  check(wear.body.outfit.WINGS === wings.id, "you can wear a limited item you own");
+  const crown = shop.BY_ID.get("winter_frost_crown");
+  Date.now = () => crown.until + 1000; // after it ended (sign in again: sessions last 30 days)
+  const T3b = (await signIn("cccccccccccccccccccccccccccccccc", "Buyer")).body.token;
+  const late = await call("POST", "/v1/me/unlock", { item: crown.id }, T3b);
+  check(late.status === 409 && /no longer available/.test(late.body.error), "a limited item can't be bought after its end date");
+  Date.now = () => crown.from - 1000; // before it starts
+  const early = await call("POST", "/v1/me/unlock", { item: crown.id }, T3b);
+  check(early.status === 409, "...or before it starts (" + early.status + " " + JSON.stringify(early.body).slice(0, 80) + ")");
+  // points: daily bonus grows with the streak, weekly goal after 300 active minutes
+  const U4 = "dddddddddddddddddddddddddddddddd";
+  const T4 = (await signIn(U4, "Grinder")).body.token;
+  let t = Date.UTC(2026, 11, 7, 12); // a Monday
+  Date.now = () => t;
+  const d1 = await call("POST", "/v1/me/heartbeat", null, T4);
+  check(d1.body.notes.some((x) => x.title === "Daily bonus +25"), "day 1 daily bonus is 25");
+  for (let k = 2; k <= 8; k++) {
+    t += 86400000;
+    const r = await call("POST", "/v1/me/heartbeat", null, T4);
+    if (k === 8) check(r.body.notes.some((x) => x.title === "Daily bonus +60"), "day 8 daily bonus is 60 (+5 a day)");
+    if (k === 7) check(r.body.notes.some((x) => x.title === "7-day streak +200"), "a 7-day streak gives 200");
+  }
+  db.prepare("UPDATE players SET week_minutes = 299 WHERE uuid = ?").run(U4);
+  t += 60000;
+  const wk = await call("POST", "/v1/me/heartbeat", null, T4);
+  check(wk.body.notes.some((x) => x.title === "Weekly goal +250") && wk.body.weekGoalDone === true, "5 hours in a week gives the weekly bonus");
+  t += 60000;
+  const again = await call("POST", "/v1/me/heartbeat", null, T4);
+  check(!again.body.notes.some((x) => x.title.startsWith("Weekly goal")), "the weekly bonus is paid once a week");
+  Date.now = realNow;
+  const snap2 = (await call("GET", "/v1/shop")).body;
+  check(Array.isArray(snap2.limited), "shop endpoint lists limited items");
+}
 console.log(fails ? `FAILED ${fails}/${n}` : `api: all ${n} checks passed`);
 process.exit(fails ? 1 : 0);

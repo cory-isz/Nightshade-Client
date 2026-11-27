@@ -46,8 +46,8 @@ public final class WardrobeScreen extends NsMenuScreen {
     private float autoSpin = 1f;
     private boolean dragging;
     private float zoom = 1f;
-    /** Item grid: filter (All, Owned, Locked, Favourites), sort (Rarity, Price, Name) and scroll. */
-    private static final String[] FILTERS = {"All", "Owned", "Locked", "Favourites"};
+    /** Item grid: filter (All, Favourites), sort (Rarity, Price, Name) and scroll. The category tabs only show what you own. */
+    private static final String[] FILTERS = {"All", "Favourites"};
     private static final String[] SORTS = {"Rarity", "Price", "Name"};
     private int filter;
     private int sort;
@@ -97,7 +97,7 @@ public final class WardrobeScreen extends NsMenuScreen {
     private void selectFirst() {
         if (shopTab) {
             List<Catalog.Item> shop = com.nightshade.cosmetic.Shop.listing();
-            selected = shop.isEmpty() ? Catalog.in(tab).get(0) : shop.get(0);
+            selected = shop.isEmpty() ? Catalog.listed(tab).get(0) : shop.get(0);
             Wardrobe.clearPreview();
             Wardrobe.setPreview(selected.category, selected.id);
             scrollTarget = scroll = 0;
@@ -106,7 +106,8 @@ public final class WardrobeScreen extends NsMenuScreen {
         String eq = Wardrobe.equipped(tab);
         selected = eq != null ? Catalog.byId(eq) : null;
         if (selected == null || selected.category != tab) {
-            selected = Catalog.in(tab).get(0);
+            List<Catalog.Item> mine = visibleItems();
+            selected = mine.isEmpty() ? Catalog.listed(tab).get(0) : mine.get(0); // the first thing you own here
         }
         Wardrobe.clearPreview();
         Wardrobe.setPreview(tab, selected.id);
@@ -116,9 +117,9 @@ public final class WardrobeScreen extends NsMenuScreen {
     /** The items in the current tab after the filter and sort. */
     private List<Catalog.Item> visibleItems() {
         List<Catalog.Item> out = new java.util.ArrayList<>();
-        for (Catalog.Item it : shopTab ? com.nightshade.cosmetic.Shop.listing() : Catalog.in(tab)) {
+        for (Catalog.Item it : shopTab ? com.nightshade.cosmetic.Shop.listing() : Catalog.listed(tab)) {
             boolean owned = Wardrobe.owns(it);
-            if (filter == 1 && !owned || filter == 2 && owned || filter == 3 && !Wardrobe.favourite(it)) {
+            if (!shopTab && !owned || filter == 1 && !Wardrobe.favourite(it)) { // the category tabs only show what you own
                 continue;
             }
             out.add(it);
@@ -263,7 +264,7 @@ public final class WardrobeScreen extends NsMenuScreen {
 
     private void drawHeader(GuiGraphics ctx, int mx, int my) {
         Fonts.draw(ctx, "Wardrobe", 18, 13, 0xFFFFFFFF, false);
-        String got = Wardrobe.ownedCount() + " / " + Catalog.all().size() + " collected" + (com.nightshade.cosmetic.CloudSync.online() ? "  \u00B7  online" : "");
+        String got = Wardrobe.ownedCount() + " / " + (Catalog.all().size() + Catalog.remote().size()) + " collected" + (com.nightshade.cosmetic.CloudSync.online() ? "  \u00B7  online" : "");
         Fonts.draw(ctx, got, 26 + Fonts.width("Wardrobe"), 13, Theme.TEXT_DIM, false);
         String pts = String.format("%,d", Wardrobe.points());
         int pw = Fonts.width(pts) + 52;
@@ -395,7 +396,7 @@ public final class WardrobeScreen extends NsMenuScreen {
     }
 
     /** True when the filter chips and the sort button would overlap at full length. */
-    private static final String[][] FILTER_LABELS = {{"All", "Owned", "Locked", "Favourites"}, {"All", "Owned", "Locked", "Faves"}, {"All", "Own", "Lock", "Fav"}};
+    private static final String[][] FILTER_LABELS = {{"All", "Favourites"}, {"All", "Faves"}, {"All", "Fav"}};
 
     /** How short the filter and sort labels must be to fit: 0 = full, 1 = "Faves" and no "Sort:", 2 = shortest. */
     private int filterTier() {
@@ -467,11 +468,16 @@ public final class WardrobeScreen extends NsMenuScreen {
             drawShop(ctx, mx, my, x1, x2);
             return;
         }
-        Fonts.draw(ctx, s.name, x1, y, 0xFFFFFFFF, true);
+        int room = x2 - 112 - x1; // room for the button on the right
         int tw = Fonts.width(s.tier.title) + 12;
-        int tagX = x1 + Fonts.width(s.name) + 8;
-        RenderUtil.roundedRect(ctx, tagX, y - 2, tagX + tw, y + 10, 5, ColorUtil.withAlpha(Theme.PANEL, 0xFF));
-        Fonts.draw(ctx, s.tier.title, tagX + 6, y, tierColor(s.tier), false);
+        boolean tag = Fonts.width(s.name) + 8 + tw <= room;
+        String name = Fonts.trim(s.name, tag ? room - tw - 8 : room);
+        Fonts.draw(ctx, name, x1, y, 0xFFFFFFFF, true);
+        if (tag) { // the rarity tag only when it fits next to the name
+            int tagX = x1 + Fonts.width(name) + 8;
+            RenderUtil.roundedRect(ctx, tagX, y - 2, tagX + tw, y + 10, 5, ColorUtil.withAlpha(Theme.PANEL, 0xFF));
+            Fonts.draw(ctx, s.tier.title, tagX + 6, y, tierColor(s.tier), false);
+        }
         Fonts.draw(ctx, Fonts.trim(s.description, x2 - x1 - 120), x1, y + 13, Theme.TEXT_DIM, false);
         boolean owned = Wardrobe.owns(s);
         boolean worn = s.id.equals(Wardrobe.equipped(s.category));
@@ -488,8 +494,11 @@ public final class WardrobeScreen extends NsMenuScreen {
         action.render(ctx, x2 - 104, y - 2, 104, 20, mx, my);
         if (!owned && !com.nightshade.cosmetic.Shop.available(s)) {
             int dd = com.nightshade.cosmetic.Shop.daysUntilBack(s);
-            String when = dd == 1 ? "Back tomorrow" : dd > 1 ? "Back in " + dd + " days" : "Not in the shop";
+            String when = s.limited() ? "Limited - no longer available" : dd == 1 ? "Back tomorrow" : dd > 1 ? "Back in " + dd + " days" : "Not in the shop";
             Fonts.draw(ctx, Fonts.trim(when, x2 - x1), x2 - Math.min(Fonts.width(when), x2 - x1), y + 22, Theme.TEXT_DIM, false);
+        } else if (s.limited()) {
+            String lim = owned ? "Limited  \u00B7  " + s.limitedTag : "Limited  \u00B7  ends in " + com.nightshade.cosmetic.Shop.format(com.nightshade.cosmetic.Shop.millisLeft(s));
+            Fonts.draw(ctx, Fonts.trim(lim, x2 - x1), x2 - Math.min(Fonts.width(lim), x2 - x1), y + 22, 0xFF7FD3FF, false);
         } else if (!owned && com.nightshade.cosmetic.Shop.discount(s) > 0) {
             String deal = com.nightshade.cosmetic.Shop.discount(s) + "% off - was " + String.format("%,d", s.price);
             Fonts.draw(ctx, deal, x2 - Fonts.width(deal), y + 22, 0xFF9FD8B0, false);
@@ -531,8 +540,12 @@ public final class WardrobeScreen extends NsMenuScreen {
         int top = GRID_TOP;
         int bottom = height - 36;
         if (items.isEmpty()) {
-            String msg = shopTab ? "You own everything in the shop today - check back tomorrow" : filter == 3 ? "No favourites yet - click the star on an item" : filter == 1 ? "You don't own anything here yet" : "You own everything here!";
-            Fonts.drawCentered(ctx, msg, (x1 + x2) / 2, top + 30, Theme.TEXT_DIM, false);
+            String msg = shopTab ? "You own everything in the shop today - check back tomorrow" : filter == 1 ? "No favourites yet - click the star on an item"
+                    : "No " + tab.title.toLowerCase(java.util.Locale.ROOT) + " yet";
+            Fonts.drawCentered(ctx, Fonts.trim(msg, x2 - x1 - 8), (x1 + x2) / 2, top + 30, Theme.TEXT_DIM, false);
+            if (!shopTab && filter == 0) {
+                Fonts.drawCentered(ctx, Fonts.trim("Get them in the Shop", x2 - x1 - 8), (x1 + x2) / 2, top + 30 + Fonts.height() + 3, Theme.TEXT_DIM, false);
+            }
             return;
         }
         ctx.enableScissor(x1 - 2, top, x2 + 2, bottom);
@@ -614,6 +627,28 @@ public final class WardrobeScreen extends NsMenuScreen {
         String shown = Fonts.width(when) <= room ? when : Fonts.trim("New items in " + com.nightshade.cosmetic.Shop.format(com.nightshade.cosmetic.Shop.millisToDailyReset()), room);
         Fonts.draw(ctx, shown, x2 - Fonts.width(shown), y + 3, Theme.TEXT_DIM, false);
         y += 16;
+        // limited and new (downloaded) items, never part of the rotation
+        List<Catalog.Item> lim = com.nightshade.cosmetic.Shop.limitedAndNew();
+        if (!lim.isEmpty()) {
+            Catalog.Item first = lim.get(0);
+            String head = first.limited() ? "LIMITED  \u00B7  " + first.limitedTag : "NEW";
+            Fonts.draw(ctx, head, x1, y, 0xFF7FD3FF, false);
+            if (first.limited()) {
+                String ends = "ends in " + com.nightshade.cosmetic.Shop.format(com.nightshade.cosmetic.Shop.millisLeft(first));
+                Fonts.draw(ctx, ends, x2 - Fonts.width(ends), y, Theme.TEXT_DIM, false);
+            }
+            y += 12;
+            int gap = 6;
+            int cols = Math.max(2, Math.min(lim.size(), (x2 - x1 + gap) / (74 + gap)));
+            int cw = (x2 - x1 - gap * (cols - 1)) / cols;
+            int ch = 74;
+            for (int i = 0; i < lim.size(); i++) {
+                int cx = x1 + (i % cols) * (cw + gap);
+                int cy = y + (i / cols) * (ch + gap);
+                shopCard(ctx, lim.get(i), cx, cy, cx + cw, cy + ch, mx, my, top, bottom, null, now);
+            }
+            y += ((lim.size() + cols - 1) / cols) * (ch + gap) + 8;
+        }
         // featured deal
         Catalog.Item featured = com.nightshade.cosmetic.Shop.featured();
         if (featured != null) {
@@ -698,7 +733,7 @@ public final class WardrobeScreen extends NsMenuScreen {
         if (featured) { // a soft gold shine across the top
             RenderUtil.horizontalGradient(ctx, x1 + 8, y1 + 1, x2 - 8, y1 + 2, 0x00FFC857, 0xA0FFC857);
         }
-        int outline = sel ? Theme.accentLight() : featured ? GOLD : it.tier == Catalog.Tier.MYTHIC ? mythic(now, 3) : it.tier == Catalog.Tier.LEGENDARY ? 0xC0FFC857 : Theme.BORDER;
+        int outline = sel ? Theme.accentLight() : featured ? GOLD : it.limited() ? 0xFF7FD3FF : it.tier == Catalog.Tier.MYTHIC ? mythic(now, 3) : it.tier == Catalog.Tier.LEGENDARY ? 0xC0FFC857 : Theme.BORDER;
         RenderUtil.roundedOutline(ctx, x1, y1, x2, y2, 9, outline);
         int w = x2 - x1;
         int h = y2 - y1;
@@ -734,6 +769,12 @@ public final class WardrobeScreen extends NsMenuScreen {
             int rw = Fonts.width(r) + 8;
             RenderUtil.roundedRect(ctx, x2 - rw - 4, y1 + 4, x2 - 4, y1 + 15, 5, off >= com.nightshade.cosmetic.Shop.FEATURED_DISCOUNT ? GOLD : 0xFF2E9D6A);
             Fonts.draw(ctx, r, x2 - rw, y1 + 6, off >= com.nightshade.cosmetic.Shop.FEATURED_DISCOUNT ? 0xFF120D22 : 0xFFFFFFFF, false);
+        }
+        if (it.limited() || (it.remote && it.added > 0 && now - it.added < 7L * 86_400_000L)) {
+            String r = it.limited() ? "LIMITED" : "NEW";
+            int rw = Fonts.width(r) + 8;
+            RenderUtil.roundedRect(ctx, x2 - rw - 4, y1 + 4, x2 - 4, y1 + 15, 5, 0xFF7FD3FF);
+            Fonts.draw(ctx, r, x2 - rw, y1 + 6, 0xFF0B1A2E, false);
         }
         if (Wardrobe.favourite(it)) {
             star(ctx, x1 + 5, y1 + 5, GOLD);
@@ -799,11 +840,17 @@ public final class WardrobeScreen extends NsMenuScreen {
 
     /** "back tomorrow" / "back in 5 days" for something that isn't in the shop. */
     private static String backIn(Catalog.Item it) {
+        if (it.limited()) {
+            return "it was a limited item and is no longer available";
+        }
         int d = com.nightshade.cosmetic.Shop.daysUntilBack(it);
         return d == 1 ? "it's back in the shop tomorrow" : d > 1 ? "it's back in the shop in " + d + " days" : "it comes back in a later rotation";
     }
 
     private static String backShort(Catalog.Item it) {
+        if (it.limited()) {
+            return "Ended";
+        }
         int d = com.nightshade.cosmetic.Shop.daysUntilBack(it);
         return d == 1 ? "Back tomorrow" : d > 1 ? "Back in " + d + "d" : "Not in shop";
     }
@@ -889,7 +936,9 @@ public final class WardrobeScreen extends NsMenuScreen {
         String[][] stats = {
                 {"Your points", String.format("%,d", Wardrobe.points())},
                 {"Played with Nightshade", (mins / 60) + "h " + (mins % 60) + "m"},
-                {"Daily streak", "Day " + Wardrobe.streak() + " of 7"}};
+                {"Daily streak", "Day " + Wardrobe.streak() + " of 7  (+" + Wardrobe.dailyBonus(Wardrobe.streak() + 1) + " tomorrow)"},
+                {"Weekly goal", Wardrobe.weekGoalDone() ? "Done! +" + Wardrobe.WEEKLY_BONUS + " earned"
+                        : (Wardrobe.weekMinutes() / 60) + "h " + (Wardrobe.weekMinutes() % 60) + "m of 5h  (+" + Wardrobe.WEEKLY_BONUS + ")"}};
         for (String[] st : stats) {
             Fonts.draw(ctx, st[0], x1, y, Theme.TEXT_DIM, false);
             Fonts.draw(ctx, st[1], gx2() - Fonts.width(st[1]), y, 0xFFFFFFFF, false);
@@ -900,7 +949,9 @@ public final class WardrobeScreen extends NsMenuScreen {
         y += 14;
         String[] rules = {
                 "1 point for every minute you play (60 an hour)",
-                "+" + Wardrobe.DAILY + " for your first game each day, +" + Wardrobe.STREAK + " for a 7-day streak",
+                "Daily bonus for your first game each day: +" + Wardrobe.DAILY + ", growing +" + Wardrobe.DAILY_STEP + " a day of your streak up to +" + Wardrobe.DAILY_MAX,
+                "+" + Wardrobe.STREAK + " for every 7-day streak, +" + Wardrobe.WEEKLY_BONUS + " for playing 5 hours in a week (Monday to Sunday)",
+                "Limited items are only for sale until their end date, at their own special price - then they are gone",
                 "No points in menus, while paused or after 5 minutes AFK",
                 "Common 300 (5 h)  -  Rare 900 (15 h)  -  Legendary 2,500 (40 h)  -  Mythic 6,000 (100 h)",
                 "Only what is in the Shop can be bought: new daily items every day (UTC), Legendary and Mythic picks every Monday",
@@ -983,7 +1034,7 @@ public final class WardrobeScreen extends NsMenuScreen {
         } else if (Wardrobe.owns(s)) {
             Wardrobe.equip(s);
         } else if (!com.nightshade.cosmetic.Shop.available(s)) {
-            NightshadeClient.client().notifications().info("Not in the shop", s.name + " comes back in a later rotation");
+            NightshadeClient.client().notifications().info("Not in the shop", s.name + (s.limited() ? " was limited and is no longer available" : " comes back in a later rotation"));
         } else if (Wardrobe.points() >= com.nightshade.cosmetic.Shop.price(s)) {
             confirm = s;
             confirmBundle = false;

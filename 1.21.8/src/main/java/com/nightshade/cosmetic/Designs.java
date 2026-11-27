@@ -377,10 +377,18 @@ public final class Designs {
     public static final class Cape {
         public final VoxelModel model;
         public final VoxelModel glow;
+        /** Size of one cube in blocks: 1/16 for the 10 x 17 capes, smaller for detailed downloaded ones. */
+        public final float unit;
 
         Cape(Grid g, Grid glow) {
-            this.model = VoxelModel.builder().extrude(g, -5, 0, 0, 1).build();
-            this.glow = glow == null ? null : VoxelModel.builder().extrude(glow, -5, 0, 1, 1).build();
+            this(g, glow, 1);
+        }
+
+        /** {@code res} cubes per model pixel: a res-2 cape is a 20 x 34 picture. */
+        Cape(Grid g, Grid glow, int res) {
+            this.model = VoxelModel.builder().extrude(g, -5 * res, 0, 0, 1).build();
+            this.glow = glow == null ? null : VoxelModel.builder().extrude(glow, -5 * res, 0, 1, 1).build();
+            this.unit = 1f / (16f * res);
         }
     }
 
