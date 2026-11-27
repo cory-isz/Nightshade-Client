@@ -91,6 +91,7 @@ public final class ModuleRegistry {
         manager.register(new ServerAddressHud());
         manager.register(new ComboCounterHud());
         manager.register(new com.nightshade.module.hud.ComboTrainerHud());
+        manager.register(new com.nightshade.module.pvp.SessionRecap());
         manager.register(new TargetHud());
         manager.register(new MemoryHud());
         manager.register(new com.nightshade.module.hud.SpeedHud());
