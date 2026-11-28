@@ -17,6 +17,7 @@ import java.util.Locale;
  */
 public final class ReplayControlsScreen extends NsScreen {
     private int barX1, barX2, barY;
+    private final java.util.Set<Integer> held = new java.util.HashSet<>();
 
     public ReplayControlsScreen() {
         super(Component.literal("Replay"));
@@ -34,6 +35,14 @@ public final class ReplayControlsScreen extends NsScreen {
 
     @Override
     public void tick() {
+        ReplayPlayer cur = ReplayPlayer.current();
+        if (cur != null && cur.camera() == ReplayPlayer.CameraMode.FREE) {
+            double step = held.contains(com.mojang.blaze3d.platform.InputConstants.KEY_LCONTROL) ? 1.2 : 0.45;
+            double f = (held.contains(com.mojang.blaze3d.platform.InputConstants.KEY_W) ? 1 : 0) - (held.contains(com.mojang.blaze3d.platform.InputConstants.KEY_S) ? 1 : 0);
+            double s = (held.contains(com.mojang.blaze3d.platform.InputConstants.KEY_D) ? 1 : 0) - (held.contains(com.mojang.blaze3d.platform.InputConstants.KEY_A) ? 1 : 0);
+            double u = (held.contains(com.mojang.blaze3d.platform.InputConstants.KEY_E) ? 1 : 0) - (held.contains(com.mojang.blaze3d.platform.InputConstants.KEY_Q) ? 1 : 0);
+            cur.moveFree(f * step, s * step, u * step);
+        }
         ReplayPlayer.tickPlayback();
         if (!ReplayPlayer.active()) {
             minecraft.setScreen(null);
@@ -54,8 +63,10 @@ public final class ReplayControlsScreen extends NsScreen {
         String time = String.format(Locale.ROOT, "%s   %.1fs / %.1fs   %sx   %d players", state, p.seconds(), p.length(),
                 p.speed() == (int) p.speed() ? Integer.toString((int) p.speed()) : Float.toString(p.speed()), p.players());
         Fonts.draw(ctx, time, x1 + 10, y1 + 6, Theme.TEXT, false);
-        String keys = "Space pause  ·  ← → 5s  ·  ↑ ↓ speed  ·  Esc stop";
+        String keys = "Space pause  ·  ← → 5s  ·  ↑ ↓ speed  ·  C camera  ·  Esc stop";
         Fonts.draw(ctx, keys, x1 + w - 10 - Fonts.width(keys), y1 + 6, Theme.TEXT_DIM, false);
+        String camLine = "Camera: " + p.camera().label + (p.camera() == ReplayPlayer.CameraMode.FREE ? "   WASD move  ·  Q E down/up  ·  Ctrl faster  ·  right-drag to look" : "");
+        Fonts.draw(ctx, camLine, x1 + w - 10 - Fonts.width(camLine), y1 - 12, Theme.TEXT_DIM, true);
         barX1 = x1 + 10;
         barX2 = x1 + w - 10;
         barY = y1 + 22;
@@ -78,12 +89,36 @@ public final class ReplayControlsScreen extends NsScreen {
     }
 
     @Override
+    protected boolean onMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        ReplayPlayer p = ReplayPlayer.current();
+        if (p != null && button == 1) {
+            p.lookFree((float) deltaX * 0.6f, (float) deltaY * 0.6f);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    protected boolean onKeyReleased(int keyCode, int scanCode, int modifiers) {
+        held.remove(keyCode);
+        return false;
+    }
+
+    @Override
     protected boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
         ReplayPlayer p = ReplayPlayer.current();
         if (p == null) {
             return false;
         }
+        held.add(keyCode);
         switch (keyCode) {
+            case com.mojang.blaze3d.platform.InputConstants.KEY_C -> p.cycleCamera();
+            case com.mojang.blaze3d.platform.InputConstants.KEY_W, com.mojang.blaze3d.platform.InputConstants.KEY_A,
+                 com.mojang.blaze3d.platform.InputConstants.KEY_S, com.mojang.blaze3d.platform.InputConstants.KEY_D,
+                 com.mojang.blaze3d.platform.InputConstants.KEY_Q, com.mojang.blaze3d.platform.InputConstants.KEY_E,
+                 com.mojang.blaze3d.platform.InputConstants.KEY_LCONTROL -> {
+                return p.camera() == ReplayPlayer.CameraMode.FREE;
+            }
             case com.mojang.blaze3d.platform.InputConstants.KEY_SPACE -> p.togglePause();
             case com.mojang.blaze3d.platform.InputConstants.KEY_LEFT -> p.seek(-5);
             case com.mojang.blaze3d.platform.InputConstants.KEY_RIGHT -> p.seek(5);
